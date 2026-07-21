@@ -5,23 +5,36 @@ resolved from a ZIP code via OpenWeatherMap, backed by Firebase Realtime Databas
 (with a zero-setup in-memory fallback), and a React frontend that demonstrates
 create / read / update / delete.
 
-## Quick start (zero setup)
+## Quick start
 
 ```bash
-npm install
+npm install               # backend deps
 cp .env.example .env      # already contains a working OpenWeatherMap key
-npm start                 # http://localhost:8080
+npm run build             # installs web deps + builds the Vite frontend -> web/dist
+npm start                 # http://localhost:8080  (Express serves API + built UI)
 ```
 
-Open **http://localhost:8080** — the React UI is served by the same server.
-By default it uses an **in-memory** store, so nothing external is required.
+Open **http://localhost:8080**. By default it uses an **in-memory** store, so
+nothing external is required.
+
+### Frontend dev (hot reload)
+
+The UI is a **Vite + React** app in `web/`. For iterative work, run the backend
+and Vite dev server side by side (Vite proxies `/api` → `:8080`):
+
+```bash
+npm run dev        # terminal 1: backend on :8080 (nodemon)
+npm run web:dev    # terminal 2: Vite dev server on :5173 (open this one)
+```
 
 ### Tests
 
 ```bash
-npm test                         # unit/integration (Node's test runner + supertest)
-npx playwright install chromium  # one-time, for e2e
-npm run test:e2e                 # end-to-end (Playwright drives the real UI)
+npm test                         # backend unit/integration (node:test + supertest)
+
+npm run web:install              # one-time: web deps for the e2e build
+npx playwright install chromium  # one-time: e2e browser
+npm run test:e2e                 # end-to-end (Playwright builds the UI + drives it)
 ```
 
 Both suites are hermetic: the unit tests stub `fetch`; the e2e tests run the
@@ -83,7 +96,13 @@ src/
   schemas/userSchemas.js   zod body/param schemas (.strict → rejects untrusted fields)
   middleware/
     validate.js  requestLogger.js  errorHandler.js
-public/index.html          React CRUD UI (ReactFire live sync + polling fallback)
+web/                       Vite + React frontend (built to web/dist, served by Express)
+  vite.config.js           dev server + /api proxy → :8080
+  src/
+    App.jsx                fetches /api/config → live (ReactFire) or polling source
+    live.jsx               ReactFire providers + live RTDB subscription (code-split)
+    components/            UserManager, UserCard, LocalClock (the live-clock addition)
+    api.js  util.js  styles.css
 test/users.test.js         unit/integration suite
 e2e/users.spec.js          Playwright e2e suite
 ```
@@ -106,9 +125,10 @@ driver, so nothing else changes.
 ### Live UI sync with ReactFire (optional)
 
 When the **public web** Firebase config is also provided, the frontend uses
-**ReactFire** to subscribe to the `users` node in the Realtime Database and
-updates live (writes still go through the API, then RTDB pushes the change
-back). Without it, the UI falls back to polling `GET /api/users`. Add to `.env`:
+**ReactFire** (`web/src/live.jsx`, code-split so polling mode never loads the
+Firebase SDK) to subscribe to the `users` node in the Realtime Database and
+update live — writes still go through the API, then RTDB pushes the change back.
+Without it, the UI falls back to polling `GET /api/users`. Add to `.env`:
 
 ```bash
 FIREBASE_API_KEY=...
@@ -118,8 +138,9 @@ FIREBASE_APP_ID=...
 FIREBASE_MESSAGING_SENDER_ID=...
 ```
 
-The browser needs read access to `/users`, so set your RTDB rules accordingly
-for the demo (e.g. authenticated read, or `.read: true` for a throwaway project).
+The browser needs read access to `/users`; `database.rules.json` already grants
+public read for the demo (client writes are denied — the admin SDK bypasses
+rules and owns all writes). Deploy it with `firebase deploy --only database`.
 
 ## Design decisions & assumptions
 

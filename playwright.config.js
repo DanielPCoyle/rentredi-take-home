@@ -15,7 +15,9 @@ module.exports = defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "node src/index.js",
+    // Build the Vite frontend, then start Express serving it (single origin).
+    // Requires web deps installed once: `npm run web:install`.
+    command: "npm run web:build && node src/index.js",
     url: "http://localhost:8080/health",
     reuseExistingServer: !process.env.CI,
     timeout: 30000,

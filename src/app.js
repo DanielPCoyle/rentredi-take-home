@@ -1,3 +1,4 @@
+const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const { requestLogger } = require("./middleware/requestLogger");
@@ -12,8 +13,17 @@ function createApp(config) {
   app.use(express.json());
   app.use(requestLogger);
 
-  // Serve the React frontend (static, no build step).
-  app.use(express.static(path.join(__dirname, "..", "public")));
+  // Serve the built Vite frontend (web/dist). In dev the UI runs on Vite's own
+  // server (`npm run web:dev`) and proxies here instead.
+  const webDist = path.join(__dirname, "..", "web", "dist");
+  app.use(express.static(webDist));
+  app.get("/", (req, res, next) => {
+    if (fs.existsSync(path.join(webDist, "index.html"))) return next();
+    res
+      .status(200)
+      .type("html")
+      .send("<p>Frontend not built. Run <code>npm run web:install &amp;&amp; npm run web:build</code>, then reload.</p>");
+  });
 
   app.get("/health", (req, res) => res.json({ status: "ok" }));
 

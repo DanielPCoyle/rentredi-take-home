@@ -1,9 +1,15 @@
 node_modules/
+web/node_modules/
+web/dist/
 .env
 service-account.json
 
 # Local tooling caches
 .impeccable/
+
+# Firebase CLI debug output
+firebase-debug.log
+*-debug.log
 
 # Playwright
 /test-results/
