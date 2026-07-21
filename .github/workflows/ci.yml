@@ -1,8 +1,13 @@
 name: CI
 
-# Runs on every pull request, against any base branch.
 on:
   pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -26,7 +31,6 @@ jobs:
         run: npm ci
         working-directory: web
 
-      # Backend tests with coverage — fails the PR if coverage drops below the floor.
       - name: Test + coverage (min 80% lines)
         run: >-
           npm run coverage --
@@ -35,7 +39,6 @@ jobs:
           --coverage.thresholds.functions=80
           --coverage.thresholds.branches=65
 
-      # Build check — the production Vite bundle must compile.
       - name: Build web bundle
         run: npm run web:build
 
@@ -46,6 +49,7 @@ jobs:
           name: coverage
           path: coverage/
           if-no-files-found: ignore
+          retention-days: 7
 
   secret-pii-scan:
     name: Secret / API-key / PII scan
@@ -53,15 +57,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # full history so the scanner can diff the PR
+          fetch-depth: 0
 
-      # Secrets, API keys, private keys, tokens.
-      - name: Scan for secrets & API keys (gitleaks)
+      - name: Scan for secrets & API keys
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # High-signal PII (SSN-formatted numbers) that gitleaks does not target.
       - name: Scan for PII (SSN patterns)
         run: |
           if git grep -nE '[0-9]{3}-[0-9]{2}-[0-9]{4}' -- ':!*package-lock.json' ':!.github/**'; then
