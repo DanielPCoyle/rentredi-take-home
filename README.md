@@ -1,5 +1,17 @@
 # RentRedi — User Management API + React UI
 
+This project is a take-home exercise: a small user-management service built to
+production standards rather than as a throwaway demo. The brief is deliberately
+simple — create, read, update, and delete users — but the point is *how* it's
+built: a clean layered API, a real third-party integration (a ZIP code is turned
+into coordinates and a timezone via OpenWeatherMap, and is only re-fetched when
+the ZIP actually changes), strict input validation that never trusts
+client-supplied location data, graceful handling of external-service failures,
+structured logging, an automated test suite with coverage, and a React front-end
+wired to the whole thing. It runs locally with zero setup (in-memory store) and
+upgrades to Firebase Realtime Database with live UI sync when configured — so the
+same codebase demonstrates both a frictionless review and a production path.
+
 CRUD API for users, enriched with location data (latitude, longitude, timezone)
 resolved from a ZIP code via OpenWeatherMap, backed by Firebase Realtime Database
 (with a zero-setup in-memory fallback), and a React frontend that demonstrates
@@ -148,28 +160,124 @@ The browser needs read access to `/users`; `database.rules.json` already grants
 public read for the demo (client writes are denied — the admin SDK bypasses
 rules and owns all writes). Deploy it with `firebase deploy --only database`.
 
-## Design decisions & assumptions
+## Decisions Explained
 
-- **Don't trust the client.** `id`, `lat`, `lon`, and `timezone` are never
-  accepted from input — Zod schemas are `.strict()` and *reject* those fields.
-  Location values come only from OpenWeatherMap; `id` is assigned by the DB.
-- **In-memory default + Firebase driver behind one interface.** This is the one
-  deliberate abstraction: it makes the app runnable with zero setup, keeps tests
-  hermetic, and still demonstrates a real Firebase integration (two genuine
-  implementations, not a speculative interface).
-- **One OpenWeatherMap call.** The current-weather endpoint returns coordinates
-  *and* the timezone offset together, so a single request covers all three
-  derived fields.
-- **`timezone` is stored as the UTC offset in seconds** (what OWM returns). The
-  UI derives a readable `UTC±HH:MM` and the live clock from it.
-- **ZIP defaults to country `US`** (RentRedi's market); an optional 2-letter
-  `country` is accepted.
-- **Failure handling:** unknown ZIP → `400`; provider 5xx/other → `502`;
-  timeout (abort) → `504`; malformed/incomplete provider data → `502`. Each is
-  logged with context.
-- **`OWM_MOCK`** is a small, guarded test seam so the e2e suite runs offline.
-- **Config in env vars**, validated at startup — a missing/invalid var crashes
-  loudly instead of failing mysteriously later.
+A walkthrough of the significant choices in this codebase, the reasoning behind
+them, and the alternatives that were rejected.
+
+### Data layer: in-memory default, Firebase behind one interface
+
+The brief asked for a noSQL store (bonus for Firebase Realtime Database) *and*
+that the project run locally without unspecified setup. Those pull in opposite
+directions — Firebase needs a project and credentials. The resolution is a small
+**repository facade** (`src/db/index.js`) over two real implementations: an
+in-memory `Map` (`memory.js`, the default) and a `firebase-admin` RTDB driver
+(`firebase.js`), selected by `DB_DRIVER`. This is the *one* deliberate
+abstraction in the codebase — justified because there are genuinely two
+implementations, not a speculative interface-for-one. It makes `npm start` work
+with zero setup, keeps the tests hermetic, and still delivers the real Firebase
+bonus. The driver also accepts an injectable `admin` argument purely so it can be
+unit-tested without a live project (see *Testing*).
+
+### External integration: one OpenWeatherMap call
+
+The **current-weather endpoint** (the one in the linked docs) was chosen because
+a single request returns `coord.lat`, `coord.lon`, *and* `timezone` — all three
+derived fields at once. The geocoding endpoint would have returned coordinates
+but not the timezone, forcing a second call. `timezone` is stored exactly as OWM
+returns it — the **UTC offset in seconds** — and the UI derives the readable
+`UTC±HH:MM` label and the live clock from it, keeping one source of truth. The
+client uses the platform-native `fetch` with an `AbortController` timeout rather
+than adding an HTTP-client dependency (Node 18+ ships `fetch`).
+
+### Refetch only when the ZIP changes
+
+On update, location is re-resolved only when the ZIP (or optional country)
+actually changes; otherwise the stored coordinates are kept
+(`src/services/userService.js`). This satisfies the requirement literally and
+avoids spending an external call — and a rate-limit slot — on every name edit. A
+dedicated test asserts the external call count stays flat on a name-only update
+and increments by exactly one on a ZIP change.
+
+### Trust boundary: never trust client location data
+
+`id`, `lat`, `lon`, and `timezone` are derived server-side and must never come
+from the client. The Zod request schemas are `.strict()`, so those fields are
+actively *rejected* (`400`) rather than silently stripped — a stronger, more
+honest guarantee. Location comes only from OpenWeatherMap; `id` is assigned by
+the database. Configuration is validated with Zod at startup too, so a missing or
+malformed variable crashes loudly at boot instead of surfacing later as a
+confusing runtime error.
+
+### Error handling: typed errors + one central handler
+
+Each async controller has an explicit `try/catch` that forwards to a **central
+error handler** (`src/middleware/errorHandler.js`). Errors are typed
+(`ValidationError`, `NotFoundError`, `UpstreamError`) carrying their HTTP status
+and a stable machine `code`, so every failure becomes one consistent JSON
+envelope (`{ error: { code, message, details? } }`) without each controller
+re-deciding status codes. OpenWeatherMap failures are mapped deliberately:
+unknown ZIP → `400` (bad client input), provider 5xx/other → `502`, timeout →
+`504`, incomplete data → `502`. Expected client errors log at `warn`;
+upstream/unexpected errors log at `error` with the full stack. Logging is
+structured JSON via **pino**, with a per-request child logger (see *Logging*).
+
+### Frontend: from CDN prototype to Vite; ReactFire with a polling fallback
+
+The frontend began as a single no-build HTML file (React via CDN) to honor "runs
+with zero setup." When ReactFire was added for live Realtime Database reads, it
+was migrated to a proper **Vite + React** app — ReactFire's natural habitat, with
+real dependencies, native JSX, and no CDN module-singleton fragility. The key
+rule is that **reads and writes take different paths**: writes always go through
+the API (so the server keeps ownership of location enrichment, validation, and
+the trust boundary), while reads are live via ReactFire's RTDB subscription *when
+Firebase is configured* and fall back to API polling otherwise. That fallback is
+what keeps the app runnable — and the E2E suite green — without a Firebase
+project. ReactFire/Firebase are **code-split** so the polling path never
+downloads the Firebase SDK, and `firebase` is pinned to **v9** because
+reactfire@4 peers on it.
+
+### Firebase provisioning: ADC over key files, least-privilege rules
+
+For the live path, the backend authenticates with **Application Default
+Credentials** (`gcloud auth application-default login`) instead of a downloaded
+service-account JSON — so no long-lived secret file lives in the repo or on disk.
+The Realtime Database rules (`database.rules.json`) grant **public read of
+`/users`** (what ReactFire needs) and **deny all client writes** — writes only
+succeed through the admin SDK, which bypasses rules, keeping every mutation on the
+validated API path. The default RTDB instance was provisioned over the Management
+REST API because the CLI required an interactive `firebase init database`; the
+same ADC token plus a quota-project header scripted it end to end.
+
+### Testing: Vitest coverage, hermetic by construction
+
+The suite runs on **Vitest** with v8 coverage (~92% of `src/`). It's hermetic:
+unit tests stub `global.fetch`, and an `OWM_MOCK` env seam lets the offline
+Playwright E2E run without hitting OpenWeatherMap. The Firebase driver is the one
+piece that touches an external SDK, so `createFirebaseDb` takes an **injectable
+`admin`** — an in-memory fake is passed in to exercise its full CRUD + credential
+mapping without a live project (Vitest's module mocker couldn't intercept the
+driver's lazy `require`, and dependency injection is both cleaner and more
+explicit). The bootstrap entry `src/index.js` is excluded from coverage — it only
+wires config and starts the listener.
+
+### What was deliberately left out
+
+Scope was kept to the brief. There is no authentication, rate limiting,
+pagination, or caching layer — none were required, and adding them would be
+speculative complexity for a take-home. The codebase leans on the single
+deliberate abstraction (the DB driver) and otherwise favors the smallest code
+that reads clearly.
+
+### Assumptions
+
+- **Country defaults to `US`** (RentRedi's market); an optional 2-letter ISO
+  `country` is accepted and, when changed, also triggers a location refetch.
+- **ZIP format** is validated as a US 5-digit or ZIP+4 code.
+- **Demo RTDB rules are read-open.** Public `/users` read is fine for a demo; a
+  real deployment would gate reads behind auth.
+- **The OpenWeatherMap key** shipped in `.env.example` came with the assignment;
+  in production it would be a managed secret, never committed.
 
 ## Creative addition — live local clock per user
 
@@ -177,7 +285,7 @@ Each user card shows the **current wall-clock time at that user's location**,
 ticking every second, computed purely from the `timezone` offset we fetched and
 stored. It turns an otherwise-inert stored field into something visibly useful
 and makes it obvious the location enrichment actually worked. (See
-`LocalClock` in `public/index.html`.)
+`web/src/components/LocalClock.jsx`.)
 
 ## Logging
 
