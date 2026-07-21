@@ -48,6 +48,28 @@ Never commit known failing tests without explicitly documenting the failure.
 - Never merge, force-push, delete a branch, or close a pull request without
   explicit approval.
 
+## Permanent bug learnings
+
+Every error, frustrating bug, failed approach, or time-consuming rabbit hole is
+an opportunity to improve the repository's permanent operating instructions.
+
+At the end of every task:
+
+1. Summarize any errors, frustrating bugs, misleading assumptions, failed
+   approaches, and rabbit holes encountered.
+2. Extract a concrete, reusable rule that would prevent or shorten the same
+   problem in the future.
+3. Add that learned rule as a Markdown rule file under `.claude/rules/`.
+4. Update an existing rule file instead of creating a duplicate when the lesson
+   belongs to an established topic.
+5. Make the rule specific and actionable: include the triggering condition, the
+   required behavior, and any verification needed.
+6. If the task produced no meaningful new lesson, explicitly state that no new
+   rule was warranted; do not create filler rules.
+
+Do not consider a task complete until its applicable learned rule has been saved
+in `.claude/rules/`.
+
 ## Offline and PWA behavior
 
 Treat offline behavior as a supported product feature, not an optional
