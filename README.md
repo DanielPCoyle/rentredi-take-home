@@ -187,7 +187,9 @@ rules and owns all writes). Deploy it with `firebase deploy --only database`.
 ## Decisions Explained
 
 A walkthrough of the significant choices in this codebase, the reasoning behind
-them, and the alternatives that were rejected.
+them, and the alternatives that were rejected. The same decisions — plus
+forward-looking ADRs and a daily build log — are also captured as a linked
+knowledge base under [`knowledge-base/`](knowledge-base/README.md).
 
 ### Data layer: in-memory default, Firebase behind one interface
 
