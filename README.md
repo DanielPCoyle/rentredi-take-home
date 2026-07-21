@@ -1,5 +1,7 @@
 # RentRedi — User Management API + React UI
 
+[![CI](https://github.com/DanielPCoyle/rentredi-take-home/actions/workflows/ci.yml/badge.svg)](https://github.com/DanielPCoyle/rentredi-take-home/actions/workflows/ci.yml)
+
 This project is a take-home exercise: a small user-management service built to
 production standards rather than as a throwaway demo. The brief is deliberately
 simple — create, read, update, and delete users — but the point is *how* it's
