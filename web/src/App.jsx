@@ -1,24 +1,12 @@
-import { lazy, Suspense, useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { api } from "./api.js";
 import UserManager from "./components/UserManager.jsx";
 import Topbar from "./components/Topbar.jsx";
+import { useOnlineStatus } from "./useOnlineStatus.js";
 
 // ReactFire + Firebase are code-split into their own chunk, loaded only when the
 // backend reports a Firebase web config. The default polling path never pays for it.
 const LiveRoot = lazy(() => import("./live.jsx"));
-
-// Live connectivity, straight from the browser. useSyncExternalStore keeps React
-// in sync with the online/offline events so the UI re-renders when it flips.
-function subscribeOnline(cb) {
-  window.addEventListener("online", cb);
-  window.addEventListener("offline", cb);
-  return () => {
-    window.removeEventListener("online", cb);
-    window.removeEventListener("offline", cb);
-  };
-}
-const useOnlineStatus = () =>
-  useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
 
 // Data source A: poll the API (works with any backend, no Firebase needed).
 function PolledUsers() {
