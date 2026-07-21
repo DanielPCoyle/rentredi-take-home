@@ -49,10 +49,25 @@ export default function App() {
     })();
   }, []);
 
+  // Keep the offline cache warm. The live (Firebase) path reads over a WebSocket
+  // the service worker can't cache, so it never touches /api/users — leaving the
+  // offline fallback with nothing to show. Proactively fetch it on load and each
+  // time connectivity returns; the SW stores that snapshot for offline reads.
+  // No interval — this is a cache warmer, not a poll (PolledUsers still polls).
+  useEffect(() => {
+    const warm = () => fetch("/api/users").catch(() => {});
+    warm();
+    window.addEventListener("online", warm);
+    return () => window.removeEventListener("online", warm);
+  }, []);
+
   // Data source B: live Realtime Database subscription via ReactFire.
+  // Offline: the Firebase live path needs a WebSocket the service worker can't
+  // cache (and web RTDB has no disk persistence), so fall back to polling
+  // /api/users, which the service worker serves from cache while offline.
   const content = state.loading ? (
     <Loading />
-  ) : state.firebase ? (
+  ) : state.firebase && navigator.onLine ? (
     <Suspense fallback={<Loading label="Connecting to Firebase…" />}>
       <LiveRoot config={state.firebase} />
     </Suspense>
