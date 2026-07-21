@@ -44,7 +44,7 @@ test("POST rejects a missing name (400)", async () => {
 });
 
 test("POST rejects a malformed zip (400)", async () => {
-  const res = await request(app).post("/api/users").send({ name: "Ada", zip: "abc" });
+  const res = await request(app).post("/api/users").send({ name: "Ada", zip: "!!" });
   assert.equal(res.status, 400);
 });
 

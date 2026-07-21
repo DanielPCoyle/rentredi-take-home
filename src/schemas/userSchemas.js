@@ -6,11 +6,15 @@ const { z } = require("zod");
 
 const name = z.string().trim().min(1, "name is required").max(100);
 
-// US ZIP (5 or ZIP+4). Country optional 2-letter, defaults applied in the service.
+// Postal code — permissive so international formats work (UK "SW1A 1AA", Canada
+// "K1A 0B1", Japan "100-0001", etc.). OpenWeatherMap is the source of truth for
+// whether a given code actually resolves.
 const zip = z
   .string()
   .trim()
-  .regex(/^\d{5}(-\d{4})?$/, "zip must be a 5-digit US ZIP code");
+  .min(2, "postal code is required")
+  .max(12, "postal code is too long")
+  .regex(/^[A-Za-z0-9][A-Za-z0-9 -]*$/, "postal code contains invalid characters");
 
 const country = z
   .string()

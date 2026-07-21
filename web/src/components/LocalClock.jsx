@@ -1,17 +1,13 @@
 import { useEffect, useState } from "react";
-import { localTime } from "../util.js";
+import { localTimeString } from "../util.js";
 
 // Creative addition: a live, ticking clock showing the user's local time,
-// computed purely from the stored `timezone` offset.
-export default function LocalClock({ offset }) {
-  const [now, setNow] = useState(() => localTime(offset));
+// from the resolved IANA zone (DST-correct) or the stored UTC offset.
+export default function LocalClock({ zone, offset }) {
+  const [str, setStr] = useState(() => localTimeString(zone, offset));
   useEffect(() => {
-    const t = setInterval(() => setNow(localTime(offset)), 1000);
+    const t = setInterval(() => setStr(localTimeString(zone, offset)), 1000);
     return () => clearInterval(t);
-  }, [offset]);
-  return (
-    <span className="clock">
-      {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-    </span>
-  );
+  }, [zone, offset]);
+  return <span className="clock">{str}</span>;
 }

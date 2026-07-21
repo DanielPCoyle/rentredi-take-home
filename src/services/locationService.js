@@ -1,5 +1,18 @@
+const tzlookup = require("tz-lookup");
 const { ValidationError, UpstreamError } = require("../errors");
 const logger = require("../logger");
+
+// OpenWeatherMap only returns a numeric UTC offset. Derive the IANA timezone
+// name (e.g. "America/Chicago") from the coordinates so the UI can show a real
+// zone name. Returns null if the lookup fails (e.g. out-of-range coords).
+function resolveTimezoneName(lat, lon) {
+  try {
+    return tzlookup(lat, lon);
+  } catch (err) {
+    logger.warn({ err, lat, lon }, "timezone name lookup failed");
+    return null;
+  }
+}
 
 // Resolves a ZIP code to { lat, lon, timezone, city } using OpenWeatherMap's
 // current-weather endpoint, which returns coordinates AND the UTC offset
@@ -16,7 +29,9 @@ async function resolveLocation(zip, country, config) {
   if (mock) {
     if (zip === "00000") throw new ValidationError(`ZIP code "${zip}" (${countryCode}) was not found`);
     const seed = Number(String(zip).replace(/\D/g, "").slice(0, 5) || 0);
-    return { lat: 30 + (seed % 1000) / 100, lon: -97 - (seed % 1000) / 100, timezone: -21600, city: `City ${zip}` };
+    const lat = 30 + (seed % 1000) / 100;
+    const lon = -97 - (seed % 1000) / 100;
+    return { lat, lon, timezone: -21600, timezoneName: resolveTimezoneName(lat, lon), city: `City ${zip}` };
   }
 
   const url = `${baseUrl}/weather?zip=${encodeURIComponent(`${zip},${countryCode}`)}&appid=${apiKey}`;
@@ -71,7 +86,7 @@ async function resolveLocation(zip, country, config) {
     throw new UpstreamError("Location provider returned incomplete data");
   }
 
-  return { lat, lon, timezone, city: body.name || null };
+  return { lat, lon, timezone, timezoneName: resolveTimezoneName(lat, lon), city: body.name || null };
 }
 
 module.exports = { resolveLocation };

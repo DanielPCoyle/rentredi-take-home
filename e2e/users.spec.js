@@ -57,7 +57,7 @@ test("deletes a user", async ({ page }) => {
 
 test("shows a validation error for a malformed zip", async ({ page }) => {
   await page.getByPlaceholder("Name").fill(uniqueName("Bad"));
-  await page.getByPlaceholder("ZIP (e.g. 78701)").fill("abc");
+  await page.getByPlaceholder("ZIP (e.g. 78701)").fill("!!");
   await page.getByRole("button", { name: "Add user" }).click();
 
   await expect(page.locator(".error")).toBeVisible();

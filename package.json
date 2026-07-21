@@ -24,6 +24,7 @@
     "express": "4.19.2",
     "firebase-admin": "12.3.1",
     "pino": "9.3.2",
+    "tz-lookup": "6.1.25",
     "zod": "3.23.8"
   },
   "devDependencies": {

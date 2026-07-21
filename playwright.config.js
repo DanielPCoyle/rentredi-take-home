@@ -20,7 +20,7 @@ module.exports = defineConfig({
     command: "npm run web:build && node src/index.js",
     url: "http://localhost:8080/health",
     reuseExistingServer: !process.env.CI,
-    timeout: 30000,
+    timeout: 180000, // the Three.js chunk makes the Vite build take ~1 min
     env: {
       PORT: "8080",
       DB_DRIVER: "memory",

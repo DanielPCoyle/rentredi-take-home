@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { api } from "../api.js";
-import { fmtOffset } from "../util.js";
+import { zoneLabel } from "../util.js";
 import LocalClock from "./LocalClock.jsx";
 
-// One user. View mode shows derived location + the live clock; edit mode sends
-// only the changed fields (so the backend refetches location only on ZIP change).
-export default function UserCard({ user, onChanged }) {
+// One user. View mode shows derived location + the live clock, and is clickable
+// to focus/pulse the globe; edit mode sends only the changed fields (so the
+// backend refetches location only on ZIP change).
+export default function UserCard({ user, onChanged, onSelect, selected }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: user.name, zip: user.zip, country: user.country || "" });
   const [busy, setBusy] = useState(false);
@@ -64,21 +65,35 @@ export default function UserCard({ user, onChanged }) {
     );
   }
 
+  const stop = (fn) => (e) => {
+    e.stopPropagation();
+    fn();
+  };
+
   return (
-    <div className="card">
-      <h3>{user.name}</h3>
+    <div className={"card clickable" + (selected ? " selected" : "")} onClick={onSelect}>
+      <h3>
+        <button
+          className="card-title"
+          onClick={stop(onSelect)}
+          aria-label={`Show ${user.name} on the globe`}
+        >
+          {user.name}
+        </button>
+      </h3>
       <div className="sub">
-        {user.city || "—"} · {user.zip}
+        {user.city || "—"}
+        {user.zip ? ` (${user.zip})` : ""}
         {user.country ? `, ${user.country}` : ""}
       </div>
-      <div className="row"><span>Local time</span><LocalClock offset={user.timezone} /></div>
-      <div className="row"><span>Timezone</span><span>{fmtOffset(user.timezone)}</span></div>
+      <div className="row"><span>Local time</span><LocalClock zone={user.timezoneName} offset={user.timezone} /></div>
+      <div className="row"><span>Timezone</span><span>{zoneLabel(user.timezoneName, user.timezone)}</span></div>
       <div className="row"><span>Latitude</span><span>{user.lat}</span></div>
       <div className="row"><span>Longitude</span><span>{user.lon}</span></div>
       {error && <div className="error" style={{ marginTop: "10px" }}>{error}</div>}
       <div className="actions">
-        <button className="secondary" onClick={() => setEditing(true)} disabled={busy}>Edit</button>
-        <button className="danger" onClick={remove} disabled={busy}>Delete</button>
+        <button className="secondary" onClick={stop(() => setEditing(true))} disabled={busy}>Edit</button>
+        <button className="danger" onClick={stop(remove)} disabled={busy}>Delete</button>
       </div>
     </div>
   );
