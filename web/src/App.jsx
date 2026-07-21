@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { api } from "./api.js";
 import UserManager from "./components/UserManager.jsx";
+import Topbar from "./components/Topbar.jsx";
 
 // ReactFire + Firebase are code-split into their own chunk, loaded only when the
 // backend reports a Firebase web config. The default polling path never pays for it.
@@ -48,13 +49,21 @@ export default function App() {
     })();
   }, []);
 
-  if (state.loading) return <Loading />;
   // Data source B: live Realtime Database subscription via ReactFire.
-  return state.firebase ? (
+  const content = state.loading ? (
+    <Loading />
+  ) : state.firebase ? (
     <Suspense fallback={<Loading label="Connecting to Firebase…" />}>
       <LiveRoot config={state.firebase} />
     </Suspense>
   ) : (
     <PolledUsers />
+  );
+
+  return (
+    <>
+      <Topbar />
+      {content}
+    </>
   );
 }

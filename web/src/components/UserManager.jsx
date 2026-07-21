@@ -31,8 +31,8 @@ export default function UserManager({ users, source, onChanged }) {
 
   return (
     <div className="wrap">
-      <header>
-        <h1>RentRedi Users</h1>
+      <header className="page">
+        <h1>Users</h1>
         <span className={"badge" + (source === "live" ? " live" : "")}>
           {source === "live" ? "Live · Firebase RTDB (ReactFire)" : "API polling"}
         </span>

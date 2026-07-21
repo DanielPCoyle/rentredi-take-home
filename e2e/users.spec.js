@@ -18,7 +18,7 @@ async function createUser(page, name, zip = "78701") {
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "RentRedi Users" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Users" })).toBeVisible();
 });
 
 test("creates a user and shows a live local clock", async ({ page }) => {
