@@ -9,7 +9,9 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "node --test",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "web:install": "npm --prefix web install",
     "web:build": "npm --prefix web run build",
@@ -25,8 +27,10 @@
   },
   "devDependencies": {
     "@playwright/test": "1.47.2",
+    "@vitest/coverage-v8": "2.1.8",
     "nodemon": "2.0.12",
-    "supertest": "7.0.0"
+    "supertest": "7.0.0",
+    "vitest": "2.1.8"
   },
   "keywords": []
 }

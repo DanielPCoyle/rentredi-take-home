@@ -3,7 +3,7 @@
 // failures, and the "only refetch location when ZIP changes" rule.
 process.env.LOG_LEVEL = "silent";
 
-const { test, beforeEach, afterEach } = require("node:test");
+// test/beforeEach/afterEach are Vitest globals (vitest.config.mjs: globals: true).
 const assert = require("node:assert");
 const request = require("supertest");
 

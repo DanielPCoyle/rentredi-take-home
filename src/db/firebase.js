@@ -2,8 +2,8 @@ const fs = require("fs");
 
 // Firebase Realtime Database driver (the assignment's bonus). `firebase-admin` is
 // required lazily so the default in-memory path never needs credentials loaded.
-function createFirebaseDb(firebaseConfig) {
-  const admin = require("firebase-admin");
+// `admin` is injectable purely for testing (defaults to the real SDK).
+function createFirebaseDb(firebaseConfig, admin = require("firebase-admin")) {
   const { databaseURL, serviceAccount } = firebaseConfig;
 
   if (!databaseURL) {

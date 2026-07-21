@@ -30,15 +30,21 @@ npm run web:dev    # terminal 2: Vite dev server on :5173 (open this one)
 ### Tests
 
 ```bash
-npm test                         # backend unit/integration (node:test + supertest)
+npm test                         # backend unit/integration (Vitest + supertest)
+npm run coverage                 # same suite + v8 coverage report over src/
 
 npm run web:install              # one-time: web deps for the e2e build
 npx playwright install chromium  # one-time: e2e browser
 npm run test:e2e                 # end-to-end (Playwright builds the UI + drives it)
 ```
 
-Both suites are hermetic: the unit tests stub `fetch`; the e2e tests run the
-server with `OWM_MOCK=1` and the in-memory DB, so they need no network or keys.
+Both suites are hermetic: the unit tests stub `fetch` (and inject a fake
+`firebase-admin` into the RTDB driver); the e2e tests run the server with
+`OWM_MOCK=1` and the in-memory DB, so they need no network or keys.
+
+Coverage is **~92% of statements** across `src/` (the bootstrap entry is
+excluded). The Firebase driver is unit-tested via an injected in-memory
+`firebase-admin` fake, and also verified end-to-end against a live RTDB.
 
 ## API
 
