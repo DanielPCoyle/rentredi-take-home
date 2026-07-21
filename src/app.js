@@ -12,7 +12,7 @@ function createApp(config) {
   const app = express();
 
   app.use(compression()); // gzip responses (JS/CSS/HTML/JSON)
-  app.use(express.json());
+  app.use(express.json({ limit: "10kb" })); // cap body size — reject oversized payloads
   app.use(requestLogger);
 
   // Serve the built Vite frontend (web/dist). In dev the UI runs on Vite's own

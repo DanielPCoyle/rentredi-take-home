@@ -18,6 +18,11 @@ function resolveTimezoneName(lat, lon) {
 // current-weather endpoint, which returns coordinates AND the UTC offset
 // (`timezone`, in seconds) in a single call.
 //
+// Note on `timezone`: it is the offset *at the moment of the fetch*, so it is a
+// point-in-time snapshot that goes stale across a DST transition. `timezoneName`
+// (the IANA zone, derived from the coordinates) is the DST-safe field — the UI
+// computes the live local clock from it and only falls back to the raw offset.
+//
 // These values are the source of truth for a user's location — they are never
 // accepted from the client.
 async function resolveLocation(zip, country, config) {

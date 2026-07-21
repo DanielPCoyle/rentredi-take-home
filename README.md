@@ -17,6 +17,27 @@ resolved from a ZIP code via OpenWeatherMap, backed by Firebase Realtime Databas
 (with a zero-setup in-memory fallback), and a React frontend that demonstrates
 create / read / update / delete.
 
+## Requirements coverage
+
+> **Live demo:** _add your Railway URL_ · **Local:** `http://localhost:8080`
+
+Where each requirement from the brief is met in the code:
+
+| # | Requirement | Status | Where |
+|---|-------------|--------|-------|
+| 1 | CRUD endpoints | ✅ | `src/routes/userRoutes.js` — `POST /`, `GET /`, `GET /:id`, `PUT /:id`, `DELETE /:id` (201 / 200 / 200 / 200 / 204) |
+| 2 | Save users in a noSQL DB (**bonus: Firebase RTDB**) | ✅ **+ bonus** | `src/db/firebase.js` (`firebase-admin` RTDB), selected by `DB_DRIVER`; zero-setup in-memory default in `src/db/memory.js` |
+| 3 | Fields: `id, name, zip, latitude, longitude, timezone` | ✅ | `src/services/userService.js` → `{ id, name, zip, country, lat, lon, timezone, timezoneName, city, createdAt, updatedAt }` |
+| 4 | Create takes name + zip; fetch lat/lon/timezone from OpenWeatherMap | ✅ | `createUserSchema` (name, zip, country?); `src/services/locationService.js` calls the **current-weather** endpoint (`/data/2.5/weather`) — coordinates *and* timezone in one request |
+| 5 | Update re-fetches lat/lon/timezone **only if the ZIP changes** | ✅ | `src/services/userService.js` — the `zipChanged` gate; a test asserts the external-call count stays flat on a name-only edit |
+| 6 | Connect a ReactJS front-end | ✅ | Vite + React app in `web/`, served by Express; full CRUD via `web/src/api.js` |
+| ★ | *“add something creative”* | ✅ | A live **per-user local clock** (`web/src/components/LocalClock.jsx`) ticking from the stored zone; plus a 3D globe, an installable offline PWA, GA4 analytics, light/dark theming, and a Vitest (~92%) + Playwright suite |
+
+Two deliberate, documented choices:
+
+- **Coordinates are stored as `lat` / `lon`** — the data required by #3 under conventional short keys rather than `latitude` / `longitude`. See [External integration](#external-integration-one-openweathermap-call).
+- **The default store is in-memory** (ephemeral, so `npm start` needs zero setup and the tests stay hermetic); persistence — the noSQL bonus — is opt-in via `DB_DRIVER=firebase`. See [Data layer](#data-layer-in-memory-default-firebase-behind-one-interface) and the Firebase section below.
+
 ## Quick start
 
 ```bash
@@ -74,16 +95,19 @@ Base path `/api/users`. Success envelope `{ "data": ... }`; error envelope
 **Status codes:** `400` validation / unknown ZIP · `404` not found ·
 `502` provider error · `504` provider timeout · `500` unexpected.
 
-**User shape:** `{ id, name, zip, country, lat, lon, timezone, city }`
-(`timezone` is the UTC offset in seconds, as returned by OpenWeatherMap; `city`
-is the resolved place name).
+**User shape:** `{ id, name, zip, country, lat, lon, timezone, timezoneName, city, createdAt, updatedAt }`
+(`timezone` is the UTC offset in seconds as returned by OpenWeatherMap — a
+point-in-time value; `timezoneName` is the DST-safe IANA zone; `city` is the
+resolved place name; `createdAt` / `updatedAt` are ISO-8601 timestamps).
 
 ```bash
 curl -X POST localhost:8080/api/users \
   -H 'Content-Type: application/json' \
   -d '{"name":"Ada","zip":"78701"}'
 # { "data": { "id": "...", "name": "Ada", "zip": "78701", "country": "US",
-#             "lat": 30.2713, "lon": -97.7426, "timezone": -18000, "city": "Austin" } }
+#             "lat": 30.2713, "lon": -97.7426, "timezone": -18000,
+#             "timezoneName": "America/Chicago", "city": "Austin",
+#             "createdAt": "2026-07-21T20:00:00.000Z", "updatedAt": "2026-07-21T20:00:00.000Z" } }
 ```
 
 ## Architecture
@@ -268,6 +292,22 @@ pagination, or caching layer — none were required, and adding them would be
 speculative complexity for a take-home. The codebase leans on the single
 deliberate abstraction (the DB driver) and otherwise favors the smallest code
 that reads clearly.
+
+### What's next (production hardening)
+
+The intake review turned that "left out" list into concrete next steps:
+
+- **Auth-gate reads.** The demo grants public read of `/users`; production would
+  require an authenticated identity to read (writes are already admin-only).
+- **Pagination.** `GET /api/users` returns the full list; add limit/cursor paging
+  before the dataset grows.
+- **Rate-limiting.** Protect the API and the upstream OpenWeatherMap budget with a
+  per-IP/token limiter. (A 10 KB request-body cap is already in place.)
+- **Caching.** Cache resolved ZIP→location lookups so repeats skip the external
+  call, complementing the refetch-only-on-change rule.
+
+Each is intentionally deferred until there's real traffic to size limits and TTLs
+against.
 
 ### Assumptions
 

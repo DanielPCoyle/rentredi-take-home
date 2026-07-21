@@ -17,7 +17,15 @@ function createUserService(config) {
 
   async function create({ name, zip, country }) {
     const r = await resolveLocationFor({ zip, country });
-    const user = await db.create({ name, zip: r.zip, country: r.country, ...r.record });
+    const now = new Date().toISOString();
+    const user = await db.create({
+      name,
+      zip: r.zip,
+      country: r.country,
+      ...r.record,
+      createdAt: now,
+      updatedAt: now,
+    });
     logger.info({ userId: user.id, zip: r.zip }, "user created");
     return user;
   }
@@ -36,7 +44,7 @@ function createUserService(config) {
     const existing = await db.get(id);
     if (!existing) throw new NotFoundError(`User "${id}" not found`);
 
-    const next = { ...patch };
+    const next = { ...patch, updatedAt: new Date().toISOString() };
     if (patch.country) next.country = patch.country;
 
     // Only call the external location API when the ZIP (or country) actually
