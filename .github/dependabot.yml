@@ -13,6 +13,12 @@ updates:
         update-types:
           - minor
           - patch
+      backend-test-stack:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+        update-types:
+          - major
 
   - package-ecosystem: npm
     directory: /web
@@ -27,6 +33,19 @@ updates:
         update-types:
           - minor
           - patch
+      react-runtime:
+        patterns:
+          - "react"
+          - "react-dom"
+        update-types:
+          - major
+      vite-toolchain:
+        patterns:
+          - "vite"
+          - "@vitejs/plugin-react"
+          - "vite-plugin-pwa"
+        update-types:
+          - major
 
   - package-ecosystem: github-actions
     directory: /
