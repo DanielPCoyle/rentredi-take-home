@@ -49,6 +49,7 @@ export default function UserManager({ users, source, onChanged }) {
 
   // A fresh object each call so re-clicking the same location re-triggers the pulse.
   function focusOn(u) {
+    if (!Number.isFinite(Number(u.lat)) || !Number.isFinite(Number(u.lon))) return;
     setFocus({ id: u.id, lat: u.lat, lon: u.lon, name: u.name, city: u.city, zone: u.timezoneName, offset: u.timezone });
   }
 
@@ -62,8 +63,8 @@ export default function UserManager({ users, source, onChanged }) {
       track("user_created");
       setForm({ name: "", zip: "", country: form.country });
       setFormOpen(false); // close the mobile modal
-      onChanged();
-      if (res?.data) focusOn(res.data); // rotate + pulse to the new location
+      await onChanged();
+      if (res?.data && !res.queued) focusOn(res.data); // pending users have no coordinates yet
     } catch (err) {
       setError(err.message);
     } finally {
@@ -77,6 +78,10 @@ export default function UserManager({ users, source, onChanged }) {
         <option key={c.code} value={c.code}>{c.name}</option>
       ))}
     </select>
+  );
+
+  const globeLocations = users.filter((u) =>
+    Number.isFinite(Number(u.lat)) && Number.isFinite(Number(u.lon)),
   );
 
   return (
@@ -134,7 +139,7 @@ export default function UserManager({ users, source, onChanged }) {
           <div className="globe-shell">
             {interacted ? (
               <Suspense fallback={<div className="globe-fallback">Loading globe…</div>}>
-                <Globe locations={users} focus={focus} />
+                <Globe locations={globeLocations} focus={focus} />
               </Suspense>
             ) : (
               <div className="globe-fallback">Loading globe…</div>
