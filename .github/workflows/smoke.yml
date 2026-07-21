@@ -1,0 +1,30 @@
+name: Production smoke test
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BASE_URL: https://rentredi-sandbox-production.up.railway.app
+    steps:
+      - name: Check health endpoint
+        run: curl --fail --show-error --silent --retry 3 --retry-delay 5 "$BASE_URL/health"
+
+      - name: Check users API
+        run: |
+          body=$(curl --fail --show-error --silent --retry 3 --retry-delay 5 "$BASE_URL/api/users")
+          node -e 'const body = JSON.parse(process.argv[1]); if (!Array.isArray(body.data)) process.exit(1)' "$body"
+
+      - name: Check application shell
+        run: |
+          html=$(curl --fail --show-error --silent --retry 3 --retry-delay 5 "$BASE_URL/")
+          echo "$html" | grep -qi '<html'
+          echo "$html" | grep -qi '<script'
