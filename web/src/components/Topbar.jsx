@@ -6,7 +6,7 @@ export default function Topbar() {
   return (
     <header className="topbar">
       <div className="topbar-brand">
-        <img className="brand-logo" src="/rentredi-logo.svg" alt="RentRedi" />
+        <img className="brand-logo" src="/rentredi-logo.svg" alt="RentRedi" width="102" height="30" fetchpriority="high" />
         <span className="topbar-title">Dan Coyle's Assessment</span>
       </div>
       <ThemeToggle />

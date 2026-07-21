@@ -1,15 +1,18 @@
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
+const compression = require("compression");
 const { requestLogger } = require("./middleware/requestLogger");
 const { notFoundHandler, errorHandler } = require("./middleware/errorHandler");
 const { createUserRouter } = require("./routes/userRoutes");
+const { createPlacesRouter } = require("./routes/placesRoutes");
 
 // App factory: builds the Express app but does NOT listen, so tests can drive it
 // with supertest. Assumes db.init(config) has already been called.
 function createApp(config) {
   const app = express();
 
+  app.use(compression()); // gzip responses (JS/CSS/HTML/JSON)
   app.use(express.json());
   app.use(requestLogger);
 
@@ -30,9 +33,12 @@ function createApp(config) {
   // Public runtime config for the browser. `firebase` is the client web config
   // (or null); when null the frontend falls back to API polling instead of
   // ReactFire's live Realtime Database subscription.
-  app.get("/api/config", (req, res) => res.json({ firebase: config.webFirebase }));
+  app.get("/api/config", (req, res) =>
+    res.json({ firebase: config.webFirebase, placesEnabled: Boolean(config.google.apiKey) })
+  );
 
   app.use("/api/users", createUserRouter(config));
+  app.use("/api/places", createPlacesRouter(config));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

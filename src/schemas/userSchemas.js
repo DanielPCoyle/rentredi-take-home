@@ -22,13 +22,22 @@ const country = z
   .length(2, "country must be a 2-letter ISO code")
   .transform((c) => c.toUpperCase());
 
+// A Google Places identifier — opaque; the server resolves it (never the client).
+const placeId = z.string().trim().min(1).max(400);
+
+// Create: name + EITHER a ZIP (OpenWeatherMap) or a placeId (Google city/zip).
+// Still `.strict()` so untrusted fields (id/lat/lon/timezone) are rejected.
 const createUserSchema = z
   .object({
     name,
-    zip,
+    zip: zip.optional(),
     country: country.optional(),
+    placeId: placeId.optional(),
   })
-  .strict();
+  .strict()
+  .refine((body) => Boolean(body.zip) || Boolean(body.placeId), {
+    message: "a zip or a selected place is required",
+  });
 
 // Update: any subset, but at least one field, and still no untrusted fields.
 const updateUserSchema = z

@@ -7,14 +7,6 @@ import Topbar from "./components/Topbar.jsx";
 // backend reports a Firebase web config. The default polling path never pays for it.
 const LiveRoot = lazy(() => import("./live.jsx"));
 
-function Loading({ label = "Loading…" }) {
-  return (
-    <div className="wrap">
-      <p>{label}</p>
-    </div>
-  );
-}
-
 // Data source A: poll the API (works with any backend, no Firebase needed).
 function PolledUsers() {
   const [users, setUsers] = useState([]);
@@ -35,35 +27,32 @@ function PolledUsers() {
 }
 
 export default function App() {
-  const [state, setState] = useState({ loading: true });
+  // Render the polling UI immediately (no loading gate → no layout shift). If the
+  // backend reports a Firebase web config, upgrade to the live ReactFire source.
+  const [firebase, setFirebase] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch("/api/config");
         const { firebase } = await res.json();
-        setState({ loading: false, firebase: firebase || null });
+        if (firebase) setFirebase(firebase);
       } catch {
-        setState({ loading: false, firebase: null });
+        /* stay on polling */
       }
     })();
   }, []);
 
-  // Data source B: live Realtime Database subscription via ReactFire.
-  const content = state.loading ? (
-    <Loading />
-  ) : state.firebase ? (
-    <Suspense fallback={<Loading label="Connecting to Firebase…" />}>
-      <LiveRoot config={state.firebase} />
-    </Suspense>
-  ) : (
-    <PolledUsers />
-  );
-
   return (
     <>
       <Topbar />
-      {content}
+      {firebase ? (
+        <Suspense fallback={<PolledUsers />}>
+          <LiveRoot config={firebase} />
+        </Suspense>
+      ) : (
+        <PolledUsers />
+      )}
     </>
   );
 }

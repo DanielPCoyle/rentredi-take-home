@@ -19,3 +19,6 @@ firebase-debug.log
 # Playwright MCP session artifacts
 .playwright-mcp/
 rentredi-*.png
+
+# Stray root-level PNG screenshots (assets live under web/)
+/*.png

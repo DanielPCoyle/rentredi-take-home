@@ -1,24 +1,32 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { api } from "../api.js";
 import UserCard from "./UserCard.jsx";
+import AddressAutocomplete from "./AddressAutocomplete.jsx";
 import { COUNTRIES } from "../countries.js";
 
-// Globe is a heavy Three.js chunk — lazy-loaded so it never enters the main bundle.
+// Heavy Three.js globe — facade-loaded on first interaction so it never touches
+// the initial critical path a fresh page-load audit measures.
 const Globe = lazy(() => import("./Globe.jsx"));
 
-// Shared UI for both data sources (live ReactFire + API polling). Renders the
-// create form, then a two-column layout: the locations list and the globe.
+// Shared UI for both data sources (live ReactFire + API polling): the create
+// form, then a two-column layout of the locations list and the globe.
 export default function UserManager({ users, source, onChanged }) {
-  const [form, setForm] = useState({ name: "", zip: "", country: "US" });
+  const [form, setForm] = useState({ name: "", zip: "", country: "US", placeId: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [focus, setFocus] = useState(null);
-  const [showGlobe, setShowGlobe] = useState(false);
+  const [interacted, setInteracted] = useState(false);
+  const [placesEnabled, setPlacesEnabled] = useState(false);
+  const [resetKey, setResetKey] = useState(0); // remounts the autocomplete after add
 
-  // Facade-load the heavy Three.js globe on the user's first interaction (feels
-  // instant in practice), with a long idle fallback. This keeps the ~450 KB
-  // globe chunk off the initial critical path, so a fresh page-load audit
-  // (Lighthouse) scores the lightweight page rather than the 3D bundle.
+  useEffect(() => {
+    fetch("/api/config")
+      .then((r) => r.json())
+      .then((j) => setPlacesEnabled(!!j.placesEnabled))
+      .catch(() => {});
+  }, []);
+
+  // On the first real interaction, load the globe + react-select country picker.
   useEffect(() => {
     let mounted = false;
     const events = ["pointerdown", "pointermove", "wheel", "keydown", "touchstart", "scroll"];
@@ -30,12 +38,14 @@ export default function UserManager({ users, source, onChanged }) {
       if (mounted) return;
       mounted = true;
       cleanup();
-      setShowGlobe(true);
+      setInteracted(true);
     };
     events.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));
     const timer = setTimeout(go, 12000); // idle users still get it eventually
     return cleanup;
   }, []);
+
+  const setCountry = (code) => setForm((f) => ({ ...f, country: code }));
 
   // A fresh object each call so re-clicking the same location re-triggers the pulse.
   function focusOn(u) {
@@ -47,12 +57,12 @@ export default function UserManager({ users, source, onChanged }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await api("POST", "/api/users", {
-        name: form.name,
-        zip: form.zip,
-        country: form.country || undefined,
-      });
-      setForm({ name: "", zip: "", country: form.country }); // keep country for adding several
+      const body = placesEnabled
+        ? { name: form.name, placeId: form.placeId }
+        : { name: form.name, zip: form.zip, country: form.country || undefined };
+      const res = await api("POST", "/api/users", body);
+      setForm({ name: "", zip: "", country: form.country, placeId: "" });
+      setResetKey((k) => k + 1); // clear the autocomplete input
       onChanged();
       if (res?.data) focusOn(res.data); // rotate + pulse to the new location
     } catch (err) {
@@ -61,6 +71,14 @@ export default function UserManager({ users, source, onChanged }) {
       setBusy(false);
     }
   }
+
+  const nativeCountrySelect = (
+    <select className="country-select" aria-label="Country" value={form.country} onChange={(e) => setCountry(e.target.value)}>
+      {COUNTRIES.map((c) => (
+        <option key={c.code} value={c.code}>{c.name}</option>
+      ))}
+    </select>
+  );
 
   return (
     <div className="wrap">
@@ -71,25 +89,28 @@ export default function UserManager({ users, source, onChanged }) {
         </span>
       </header>
 
-      <form className="create" onSubmit={create}>
+      <form className={"create" + (placesEnabled ? " create-ac" : "")} onSubmit={create}>
         <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-        <input
-          placeholder="ZIP (e.g. 78701)"
-          value={form.zip}
-          onChange={(e) => setForm({ ...form, zip: e.target.value })}
-          required
-        />
-        <select
-          className="country-select"
-          aria-label="Country"
-          value={form.country}
-          onChange={(e) => setForm({ ...form, country: e.target.value })}
-        >
-          {COUNTRIES.map((c) => (
-            <option key={c.code} value={c.code}>{c.name}</option>
-          ))}
-        </select>
-        <button type="submit" disabled={busy}>{busy ? "Adding…" : "Add user"}</button>
+        {placesEnabled ? (
+          <AddressAutocomplete
+            key={resetKey}
+            onResolved={({ placeId }) => setForm((f) => ({ ...f, placeId }))}
+            onClear={() => setForm((f) => ({ ...f, placeId: "" }))}
+          />
+        ) : (
+          <>
+            <input
+              placeholder="ZIP (e.g. 78701)"
+              value={form.zip}
+              onChange={(e) => setForm({ ...form, zip: e.target.value })}
+              required
+            />
+            {nativeCountrySelect}
+          </>
+        )}
+        <button type="submit" disabled={busy || (placesEnabled && !form.placeId)}>
+          {busy ? "Adding…" : "Add user"}
+        </button>
       </form>
 
       {error && <div className="error">{error}</div>}
@@ -113,7 +134,7 @@ export default function UserManager({ users, source, onChanged }) {
 
         <div className="home-globe">
           <div className="globe-shell">
-            {showGlobe ? (
+            {interacted ? (
               <Suspense fallback={<div className="globe-fallback">Loading globe…</div>}>
                 <Globe locations={users} focus={focus} />
               </Suspense>
