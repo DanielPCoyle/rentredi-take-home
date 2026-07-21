@@ -1,0 +1,71 @@
+name: CI
+
+# Runs on every pull request, against any base branch.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-coverage:
+    name: Build, test & coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install backend deps
+        run: npm ci
+
+      - name: Install web deps
+        run: npm ci
+        working-directory: web
+
+      # Backend tests with coverage — fails the PR if coverage drops below the floor.
+      - name: Test + coverage (min 80% lines)
+        run: >-
+          npm run coverage --
+          --coverage.thresholds.lines=80
+          --coverage.thresholds.statements=80
+          --coverage.thresholds.functions=80
+          --coverage.thresholds.branches=65
+
+      # Build check — the production Vite bundle must compile.
+      - name: Build web bundle
+        run: npm run web:build
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+  secret-pii-scan:
+    name: Secret / API-key / PII scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so the scanner can diff the PR
+
+      # Secrets, API keys, private keys, tokens.
+      - name: Scan for secrets & API keys (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # High-signal PII (SSN-formatted numbers) that gitleaks does not target.
+      - name: Scan for PII (SSN patterns)
+        run: |
+          if git grep -nE '[0-9]{3}-[0-9]{2}-[0-9]{4}' -- ':!*package-lock.json' ':!.github/**'; then
+            echo "::error::Possible SSN-formatted PII found above."
+            exit 1
+          fi
+          echo "No SSN-formatted PII found."
