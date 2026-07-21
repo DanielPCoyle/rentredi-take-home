@@ -19,6 +19,7 @@ export default function UserManager({ users, source, onChanged }) {
   const [interacted, setInteracted] = useState(false);
   const [placesEnabled, setPlacesEnabled] = useState(false);
   const [resetKey, setResetKey] = useState(0); // remounts the autocomplete after add
+  const [formOpen, setFormOpen] = useState(false); // mobile: the create form opens in a modal
   const online = useOnlineStatus();
 
   // Places autocomplete needs the network (/api/places/suggest → Google). Offline
@@ -52,6 +53,14 @@ export default function UserManager({ users, source, onChanged }) {
     return cleanup;
   }, []);
 
+  // Close the mobile form modal on Escape.
+  useEffect(() => {
+    if (!formOpen) return;
+    const onKey = (e) => e.key === "Escape" && setFormOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [formOpen]);
+
   const setCountry = (code) => setForm((f) => ({ ...f, country: code }));
 
   // A fresh object each call so re-clicking the same location re-triggers the pulse.
@@ -70,6 +79,7 @@ export default function UserManager({ users, source, onChanged }) {
       const res = await api("POST", "/api/users", body);
       setForm({ name: "", zip: "", country: form.country, placeId: "" });
       setResetKey((k) => k + 1); // clear the autocomplete input
+      setFormOpen(false); // close the mobile modal
       onChanged();
       if (res?.data) focusOn(res.data); // rotate + pulse to the new location
     } catch (err) {
@@ -91,12 +101,19 @@ export default function UserManager({ users, source, onChanged }) {
     <div className="wrap">
       <header className="page">
         <h1>Users</h1>
-        <span className={"badge" + (source === "live" ? " live" : "")}>
-          {source === "live" ? "Live · Firebase RTDB (ReactFire)" : "API polling"}
-        </span>
+        <div className="page-actions">
+          <span className={"badge" + (source === "live" ? " live" : "")}>
+            {source === "live" ? "Live · Firebase RTDB (ReactFire)" : "API polling"}
+          </span>
+          <button type="button" className="new-btn" onClick={() => setFormOpen(true)}>+ New</button>
+        </div>
       </header>
 
-      <form className={"create" + (useAutocomplete ? " create-ac" : "")} onSubmit={create}>
+      <div className={"form-panel" + (formOpen ? " open" : "")}>
+        <div className="form-panel-backdrop" onClick={() => setFormOpen(false)} />
+        <div className="form-panel-body" role="dialog" aria-modal="true" aria-label="Add a user">
+          <button type="button" className="form-close" onClick={() => setFormOpen(false)} aria-label="Close">×</button>
+          <form className={"create" + (useAutocomplete ? " create-ac" : "")} onSubmit={create}>
         <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
         {useAutocomplete ? (
           <AddressAutocomplete
@@ -115,10 +132,12 @@ export default function UserManager({ users, source, onChanged }) {
             {nativeCountrySelect}
           </>
         )}
-        <button type="submit" disabled={busy || (useAutocomplete && !form.placeId)}>
-          {busy ? "Adding…" : "Add user"}
-        </button>
-      </form>
+            <button type="submit" disabled={busy || (useAutocomplete && !form.placeId)}>
+              {busy ? "Adding…" : "Add user"}
+            </button>
+          </form>
+        </div>
+      </div>
 
       {error && <div className="error">{error}</div>}
 
