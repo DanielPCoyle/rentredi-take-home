@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { api } from "./api.js";
 import UserManager from "./components/UserManager.jsx";
 import Topbar from "./components/Topbar.jsx";
@@ -6,6 +6,19 @@ import Topbar from "./components/Topbar.jsx";
 // ReactFire + Firebase are code-split into their own chunk, loaded only when the
 // backend reports a Firebase web config. The default polling path never pays for it.
 const LiveRoot = lazy(() => import("./live.jsx"));
+
+// Live connectivity, straight from the browser. useSyncExternalStore keeps React
+// in sync with the online/offline events so the UI re-renders when it flips.
+function subscribeOnline(cb) {
+  window.addEventListener("online", cb);
+  window.addEventListener("offline", cb);
+  return () => {
+    window.removeEventListener("online", cb);
+    window.removeEventListener("offline", cb);
+  };
+}
+const useOnlineStatus = () =>
+  useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
 
 function Loading({ label = "Loading…" }) {
   return (
@@ -36,6 +49,7 @@ function PolledUsers() {
 
 export default function App() {
   const [state, setState] = useState({ loading: true });
+  const online = useOnlineStatus();
 
   useEffect(() => {
     (async () => {
@@ -67,7 +81,7 @@ export default function App() {
   // /api/users, which the service worker serves from cache while offline.
   const content = state.loading ? (
     <Loading />
-  ) : state.firebase && navigator.onLine ? (
+  ) : state.firebase && online ? (
     <Suspense fallback={<Loading label="Connecting to Firebase…" />}>
       <LiveRoot config={state.firebase} />
     </Suspense>
@@ -78,6 +92,11 @@ export default function App() {
   return (
     <>
       <Topbar />
+      {!online && (
+        <div className="offline-banner" role="status" aria-live="polite">
+          Offline — showing the last synced data
+        </div>
+      )}
       {content}
     </>
   );
