@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
+    "db:setup": "bash scripts/setup-rtdb.sh",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",

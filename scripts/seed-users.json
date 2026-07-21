@@ -1,0 +1,32 @@
+{
+  "seed-ada": {
+    "id": "seed-ada",
+    "name": "Ada Lovelace",
+    "zip": "78701",
+    "country": "US",
+    "lat": 30.27,
+    "lon": -97.74,
+    "timezone": -18000,
+    "city": "Austin"
+  },
+  "seed-grace": {
+    "id": "seed-grace",
+    "name": "Grace Hopper",
+    "zip": "10001",
+    "country": "US",
+    "lat": 40.75,
+    "lon": -73.99,
+    "timezone": -14400,
+    "city": "New York"
+  },
+  "seed-alan": {
+    "id": "seed-alan",
+    "name": "Alan Turing",
+    "zip": "94103",
+    "country": "US",
+    "lat": 37.77,
+    "lon": -122.42,
+    "timezone": -25200,
+    "city": "San Francisco"
+  }
+}
