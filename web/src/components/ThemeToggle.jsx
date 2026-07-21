@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { track } from "../analytics.js";
 
 // Light/dark toggle. The initial theme is set pre-paint by an inline script in
 // index.html; here we just flip it and persist the choice.
@@ -7,6 +8,7 @@ export default function ThemeToggle() {
 
   function toggle() {
     const next = theme === "dark" ? "light" : "dark";
+    track("theme_toggle", { theme: next });
     document.documentElement.dataset.theme = next;
     try {
       localStorage.setItem("theme", next);

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { api } from "../api.js";
 import UserCard from "./UserCard.jsx";
 import { COUNTRIES } from "../countries.js";
+import { track } from "../analytics.js";
 
 // Heavy Three.js globe — facade-loaded on first interaction so it never touches
 // the initial critical path a fresh page-load audit measures.
@@ -58,6 +59,7 @@ export default function UserManager({ users, source, onChanged }) {
     try {
       const body = { name: form.name, zip: form.zip, country: form.country || undefined };
       const res = await api("POST", "/api/users", body);
+      track("user_created");
       setForm({ name: "", zip: "", country: form.country });
       setFormOpen(false); // close the mobile modal
       onChanged();
@@ -121,7 +123,7 @@ export default function UserManager({ users, source, onChanged }) {
                 key={u.id}
                 user={u}
                 onChanged={onChanged}
-                onSelect={() => focusOn(u)}
+                onSelect={() => { track("location_select"); focusOn(u); }}
                 selected={focus?.id === u.id}
               />
             ))

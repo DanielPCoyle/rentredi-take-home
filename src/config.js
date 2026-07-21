@@ -14,6 +14,10 @@ const envSchema = z.object({
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
 
+  // Google Analytics 4 Measurement ID (optional). Exposed to the browser via
+  // /api/config; absent -> the frontend loads no analytics.
+  GA_MEASUREMENT_ID: z.string().optional(),
+
   // OpenWeatherMap
   OWM_API_KEY: z.string().min(1, "OWM_API_KEY is required"),
   OWM_BASE_URL: z.string().url().default("https://api.openweathermap.org/data/2.5"),
@@ -67,6 +71,7 @@ function loadConfig(env = process.env) {
   return {
     port: e.PORT,
     logLevel: e.LOG_LEVEL,
+    gaId: e.GA_MEASUREMENT_ID || null,
     owm: {
       apiKey: e.OWM_API_KEY,
       baseUrl: e.OWM_BASE_URL,

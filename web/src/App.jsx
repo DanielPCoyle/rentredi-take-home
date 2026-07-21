@@ -3,6 +3,7 @@ import { api } from "./api.js";
 import UserManager from "./components/UserManager.jsx";
 import Topbar from "./components/Topbar.jsx";
 import { useOnlineStatus } from "./useOnlineStatus.js";
+import { initAnalytics } from "./analytics.js";
 
 // ReactFire + Firebase are code-split into their own chunk, loaded only when the
 // backend reports a Firebase web config. The default polling path never pays for it.
@@ -37,7 +38,8 @@ export default function App() {
     (async () => {
       try {
         const res = await fetch("/api/config");
-        const { firebase } = await res.json();
+        const { firebase, gaId } = await res.json();
+        if (gaId) initAnalytics(gaId);
         if (firebase) setFirebase(firebase);
       } catch {
         /* stay on polling */

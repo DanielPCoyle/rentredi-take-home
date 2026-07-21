@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "../api.js";
+import { track } from "../analytics.js";
 import { zoneLabel } from "../util.js";
 import LocalClock from "./LocalClock.jsx";
 
@@ -20,7 +21,10 @@ export default function UserCard({ user, onChanged, onSelect, selected }) {
       if (form.name !== user.name) patch.name = form.name;
       if (form.zip !== user.zip) patch.zip = form.zip;
       if ((form.country || "") !== (user.country || "")) patch.country = form.country || undefined;
-      if (Object.keys(patch).length) await api("PUT", `/api/users/${user.id}`, patch);
+      if (Object.keys(patch).length) {
+        await api("PUT", `/api/users/${user.id}`, patch);
+        track("user_updated");
+      }
       setEditing(false);
       onChanged();
     } catch (e) {
@@ -35,6 +39,7 @@ export default function UserCard({ user, onChanged, onSelect, selected }) {
     setError(null);
     try {
       await api("DELETE", `/api/users/${user.id}`);
+      track("user_deleted");
       onChanged();
     } catch (e) {
       setError(e.message);
