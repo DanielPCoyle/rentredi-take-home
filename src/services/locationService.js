@@ -14,26 +14,6 @@ function resolveTimezoneName(lat, lon) {
   }
 }
 
-// Current UTC offset (seconds) for an IANA zone, DST-aware.
-function offsetForZone(zone) {
-  try {
-    const label = new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "longOffset" })
-      .formatToParts(new Date())
-      .find((p) => p.type === "timeZoneName").value; // e.g. "GMT-07:00" or "GMT"
-    const m = label.match(/GMT([+-])(\d{2}):?(\d{2})?/);
-    if (!m) return 0;
-    return (m[1] === "-" ? -1 : 1) * (parseInt(m[2], 10) * 3600 + parseInt(m[3] || "0", 10) * 60);
-  } catch {
-    return 0;
-  }
-}
-
-// { timezoneName, timezone } from coordinates — used by the Places (city/zip) path.
-function timezoneFor(lat, lon) {
-  const timezoneName = resolveTimezoneName(lat, lon);
-  return { timezoneName, timezone: timezoneName ? offsetForZone(timezoneName) : 0 };
-}
-
 // Resolves a ZIP code to { lat, lon, timezone, city } using OpenWeatherMap's
 // current-weather endpoint, which returns coordinates AND the UTC offset
 // (`timezone`, in seconds) in a single call.
@@ -109,4 +89,4 @@ async function resolveLocation(zip, country, config) {
   return { lat, lon, timezone, timezoneName: resolveTimezoneName(lat, lon), city: body.name || null };
 }
 
-module.exports = { resolveLocation, timezoneFor };
+module.exports = { resolveLocation };

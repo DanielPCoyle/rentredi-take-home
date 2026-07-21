@@ -14,9 +14,6 @@ const envSchema = z.object({
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
 
-  // Google Places (optional) — enables the single-input address autocomplete.
-  GOOGLE_MAPS_API_KEY: z.string().optional(),
-
   // OpenWeatherMap
   OWM_API_KEY: z.string().min(1, "OWM_API_KEY is required"),
   OWM_BASE_URL: z.string().url().default("https://api.openweathermap.org/data/2.5"),
@@ -76,10 +73,6 @@ function loadConfig(env = process.env) {
       timeoutMs: e.OWM_TIMEOUT_MS,
       defaultCountry: e.DEFAULT_COUNTRY.toUpperCase(),
       mock: e.OWM_MOCK,
-    },
-    google: {
-      apiKey: e.GOOGLE_MAPS_API_KEY || null,
-      timeoutMs: e.OWM_TIMEOUT_MS,
     },
     db: {
       driver,

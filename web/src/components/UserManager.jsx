@@ -1,9 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { api } from "../api.js";
 import UserCard from "./UserCard.jsx";
-import AddressAutocomplete from "./AddressAutocomplete.jsx";
 import { COUNTRIES } from "../countries.js";
-import { useOnlineStatus } from "../useOnlineStatus.js";
 
 // Heavy Three.js globe — facade-loaded on first interaction so it never touches
 // the initial critical path a fresh page-load audit measures.
@@ -12,26 +10,11 @@ const Globe = lazy(() => import("./Globe.jsx"));
 // Shared UI for both data sources (live ReactFire + API polling): the create
 // form, then a two-column layout of the locations list and the globe.
 export default function UserManager({ users, source, onChanged }) {
-  const [form, setForm] = useState({ name: "", zip: "", country: "US", placeId: "" });
+  const [form, setForm] = useState({ name: "", zip: "", country: "US" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [focus, setFocus] = useState(null);
   const [interacted, setInteracted] = useState(false);
-  const [placesEnabled, setPlacesEnabled] = useState(false);
-  const [resetKey, setResetKey] = useState(0); // remounts the autocomplete after add
-  const online = useOnlineStatus();
-
-  // Places autocomplete needs the network (/api/places/suggest → Google). Offline
-  // it's a dead end — no suggestions load, so no placeId, so the button never
-  // enables. Fall back to the plain ZIP + country inputs whenever we're offline.
-  const useAutocomplete = placesEnabled && online;
-
-  useEffect(() => {
-    fetch("/api/config")
-      .then((r) => r.json())
-      .then((j) => setPlacesEnabled(!!j.placesEnabled))
-      .catch(() => {});
-  }, []);
 
   // On the first real interaction, load the globe + react-select country picker.
   useEffect(() => {
@@ -64,12 +47,9 @@ export default function UserManager({ users, source, onChanged }) {
     setBusy(true);
     setError(null);
     try {
-      const body = useAutocomplete
-        ? { name: form.name, placeId: form.placeId }
-        : { name: form.name, zip: form.zip, country: form.country || undefined };
+      const body = { name: form.name, zip: form.zip, country: form.country || undefined };
       const res = await api("POST", "/api/users", body);
-      setForm({ name: "", zip: "", country: form.country, placeId: "" });
-      setResetKey((k) => k + 1); // clear the autocomplete input
+      setForm({ name: "", zip: "", country: form.country });
       onChanged();
       if (res?.data) focusOn(res.data); // rotate + pulse to the new location
     } catch (err) {
@@ -96,26 +76,16 @@ export default function UserManager({ users, source, onChanged }) {
         </span>
       </header>
 
-      <form className={"create" + (useAutocomplete ? " create-ac" : "")} onSubmit={create}>
+      <form className="create" onSubmit={create}>
         <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-        {useAutocomplete ? (
-          <AddressAutocomplete
-            key={resetKey}
-            onResolved={({ placeId }) => setForm((f) => ({ ...f, placeId }))}
-            onClear={() => setForm((f) => ({ ...f, placeId: "" }))}
-          />
-        ) : (
-          <>
-            <input
-              placeholder="ZIP (e.g. 78701)"
-              value={form.zip}
-              onChange={(e) => setForm({ ...form, zip: e.target.value })}
-              required
-            />
-            {nativeCountrySelect}
-          </>
-        )}
-        <button type="submit" disabled={busy || (useAutocomplete && !form.placeId)}>
+        <input
+          placeholder="ZIP (e.g. 78701)"
+          value={form.zip}
+          onChange={(e) => setForm({ ...form, zip: e.target.value })}
+          required
+        />
+        {nativeCountrySelect}
+        <button type="submit" disabled={busy}>
           {busy ? "Adding…" : "Add user"}
         </button>
       </form>

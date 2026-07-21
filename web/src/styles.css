@@ -126,30 +126,6 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; co
 .badge.live { color: var(--ok); border-color: var(--ok); }
 
 form.create { display: grid; grid-template-columns: 2fr 1fr 0.8fr auto; gap: 10px; margin: 22px 0; }
-form.create.create-ac { grid-template-columns: 1.4fr 2.4fr auto; }
-
-/* Address autocomplete */
-.ac { position: relative; }
-.ac-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  margin: 0;
-  padding: 4px;
-  list-style: none;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-  z-index: 30;
-  max-height: 260px;
-  overflow-y: auto;
-}
-.ac-menu li { padding: 8px 10px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; color: var(--text); }
-.ac-menu li:hover { background: var(--brand); color: var(--brand-ink); }
-.ac-note { color: var(--danger); font-size: 0.78rem; margin-top: 4px; }
-@media (max-width: 620px) { form.create.create-ac { grid-template-columns: 1fr; } }
 
 input {
   background: var(--input-bg);
