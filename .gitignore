@@ -15,3 +15,7 @@ firebase-debug.log
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Playwright MCP session artifacts
+.playwright-mcp/
+rentredi-live-firebase.png
