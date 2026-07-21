@@ -216,10 +216,22 @@ export default function Globe({ locations, focus }) {
   }, [locations]);
 
   // Rotate to the focused location, pulse a ring, swap day/night texture, and
-  // pin its tooltip.
+  // pin its tooltip. Clear all selection visuals when that location is removed.
   useEffect(() => {
     const a = api.current;
-    if (!a.globe || !focus) return;
+    if (!a.globe) return;
+
+    const focusedLocationStillExists = focus
+      && locations.some((location) => String(location.id) === String(focus.id));
+
+    if (!focusedLocationStillExists) {
+      a.pinned = null;
+      a.hover = null;
+      a.targetQuat = null;
+      a.globe.ringsData([]);
+      if (a.tip) a.tip.style.display = "none";
+      return;
+    }
 
     const day = isDaytime(focus.zone, focus.offset);
     const wantTex = day ? "day" : "night";
@@ -240,7 +252,7 @@ export default function Globe({ locations, focus }) {
     a.idle = false;
     clearTimeout(a.resume);
     a.resume = setTimeout(() => { a.idle = true; }, 6000);
-  }, [focus]);
+  }, [focus, locations]);
 
   return <div className="globe-canvas-wrap" ref={mountRef} />;
 }
