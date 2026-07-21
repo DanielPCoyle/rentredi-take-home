@@ -1,0 +1,9 @@
+# All crawlers welcome, including AI answer engines (GPTBot, ClaudeBot,
+# PerplexityBot, Google-Extended, etc.). No blocks — this is a public demo.
+User-agent: *
+Allow: /
+# JSON API + health endpoints have nothing to index; keep crawl budget on the app.
+Disallow: /api/
+Disallow: /health
+
+Sitemap: https://rentredi-owm-only-production.up.railway.app/sitemap.xml

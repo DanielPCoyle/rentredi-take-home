@@ -14,7 +14,43 @@
     />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="theme-color" content="#1283b2" />
-    <title>RentRedi Users</title>
+    <title>RentRedi User Manager — Dan Coyle's Assessment</title>
+
+    <meta name="author" content="Dan Coyle" />
+    <!-- Explicitly welcome search + AI crawlers (default, stated for clarity). -->
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="https://rentredi-owm-only-production.up.railway.app/" />
+
+    <!-- Open Graph (link unfurls) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="RentRedi User Manager" />
+    <meta property="og:title" content="RentRedi User Manager — Dan Coyle's Assessment" />
+    <meta property="og:description" content="Create, view, update, and delete users, each enriched with location and timezone and plotted on an interactive globe." />
+    <meta property="og:url" content="https://rentredi-owm-only-production.up.railway.app/" />
+    <meta property="og:image" content="https://rentredi-owm-only-production.up.railway.app/rentredi-logo.svg" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter / X card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="RentRedi User Manager — Dan Coyle's Assessment" />
+    <meta name="twitter:description" content="CRUD user manager with location + timezone enrichment, plotted on an interactive globe." />
+    <meta name="twitter:image" content="https://rentredi-owm-only-production.up.railway.app/rentredi-logo.svg" />
+
+    <!-- Structured data for search + AI answer engines -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "RentRedi User Manager",
+        "url": "https://rentredi-owm-only-production.up.railway.app/",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Any (web browser)",
+        "browserRequirements": "Requires JavaScript",
+        "description": "A user-management web app: create, read, update, and delete users, each enriched with city, state, and timezone, then plotted on an interactive 3D globe with day/night lighting.",
+        "author": { "@type": "Person", "name": "Dan Coyle" }
+      }
+    </script>
+
     <script>
       // Set the theme before first paint to avoid a flash of the wrong mode.
       (function () {
@@ -32,6 +68,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <main style="max-width: 40rem; margin: 2rem auto; padding: 0 1rem; font-family: system-ui, sans-serif">
+        <h1>RentRedi User Manager</h1>
+        <p>A user-management web app for RentRedi: create, view, update, and delete users, each enriched with city, state, and timezone and plotted on an interactive 3D globe. This interface requires JavaScript.</p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
