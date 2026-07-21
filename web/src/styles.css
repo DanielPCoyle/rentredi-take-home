@@ -125,6 +125,10 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; co
 }
 .badge.live { color: var(--ok); border-color: var(--ok); }
 
+.page-actions { display: flex; align-items: center; gap: 10px; }
+.new-btn { display: none; padding: 8px 14px; } /* mobile only — desktop shows the form inline */
+.form-panel-backdrop, .form-close { display: none; } /* modal chrome — mobile only */
+
 form.create { display: grid; grid-template-columns: 2fr 1fr 0.8fr auto; gap: 10px; margin: 22px 0; }
 
 input {
@@ -221,8 +225,41 @@ button:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
   color: var(--muted); font-size: 0.9rem;
 }
 @media (max-width: 780px) {
+  /* The create form moves into a bottom-sheet modal opened by the "+ New" button. */
+  .new-btn { display: inline-flex; }
+  .form-panel { display: none; }
+  .form-panel.open { display: block; position: fixed; inset: 0; z-index: 100; }
+  .form-panel.open .form-panel-backdrop {
+    display: block; position: absolute; inset: 0; background: rgba(9, 20, 33, 0.55);
+  }
+  .form-panel.open .form-panel-body {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: var(--card);
+    border-radius: 16px 16px 0 0;
+    padding: 24px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.28);
+  }
+  .form-panel.open .form-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    position: absolute; top: 8px; right: 10px;
+    width: 34px; height: 34px; padding: 0;
+    background: transparent; color: var(--muted); font-size: 1.5rem; line-height: 1;
+  }
+  .form-panel.open form.create,
+  .form-panel.open form.create.create-ac { grid-template-columns: 1fr; margin: 6px 0 0; }
+
+  /* Globe first, then the list scrolling horizontally underneath it. */
   .home { grid-template-columns: 1fr; }
-  .home-globe { position: static; }
+  .home-globe { position: static; order: -1; }
+  .home-list {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 12px;
+    padding-bottom: 8px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+  .home-list .card { flex: 0 0 80%; max-width: 320px; scroll-snap-align: start; }
 }
 
 .card {
