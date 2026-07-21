@@ -5,7 +5,10 @@ import ThemeToggle from "./ThemeToggle.jsx";
 export default function Topbar() {
   return (
     <header className="topbar">
-      <img className="brand-logo" src="/rentredi-logo.svg" alt="RentRedi" />
+      <div className="topbar-brand">
+        <img className="brand-logo" src="/rentredi-logo.svg" alt="RentRedi" />
+        <span className="topbar-title">Dan Coyle's Assessment</span>
+      </div>
       <ThemeToggle />
     </header>
   );

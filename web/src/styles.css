@@ -72,7 +72,19 @@ body {
   top: 0;
   z-index: 10;
 }
+.topbar-brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .brand-logo { height: 30px; width: auto; display: block; }
+.topbar-title {
+  padding-left: 14px;
+  border-left: 1px solid #d9e0e9;
+  color: #253a67;
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .topbar-title { display: none; }
+}
 .theme-toggle {
   display: inline-flex;
   align-items: center;
