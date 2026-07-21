@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
-import { api } from "./api.js";
+import { api, USERS_CHANGED_EVENT } from "./api.js";
 import UserManager from "./components/UserManager.jsx";
 import Topbar from "./components/Topbar.jsx";
 import { useOnlineStatus } from "./useOnlineStatus.js";
@@ -23,7 +23,11 @@ function PolledUsers() {
   useEffect(() => {
     load();
     const t = setInterval(load, 5000);
-    return () => clearInterval(t);
+    window.addEventListener(USERS_CHANGED_EVENT, load);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener(USERS_CHANGED_EVENT, load);
+    };
   }, [load]);
   return <UserManager users={users} source="poll" onChanged={load} />;
 }
@@ -67,7 +71,7 @@ export default function App() {
       <Topbar />
       {!online && (
         <div className="offline-banner" role="status" aria-live="polite">
-          Offline — showing the last synced data
+          Offline — changes will sync when your connection returns
         </div>
       )}
       {firebase && online ? (
