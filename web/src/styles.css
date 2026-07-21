@@ -276,3 +276,14 @@ button:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
 .empty { color: var(--muted); text-align: center; padding: 40px; }
 
 @media (max-width: 620px) { form.create { grid-template-columns: 1fr; } }
+
+/* Offline indicator: slim amber bar shown while the browser reports no network.
+   Amber + dark text reads clearly in both light and dark themes. */
+.offline-banner {
+  padding: 8px 24px;
+  background: #f4a623;
+  color: #3a2a06;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}

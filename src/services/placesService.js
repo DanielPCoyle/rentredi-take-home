@@ -3,6 +3,7 @@ const logger = require("../logger");
 
 const AUTOCOMPLETE_URL = "https://places.googleapis.com/v1/places:autocomplete";
 const DETAILS_URL = "https://places.googleapis.com/v1/places";
+const GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json";
 
 // Restrict suggestions to cities and postal codes (no street addresses).
 const CITY_ZIP_TYPES = ["locality", "postal_town", "administrative_area_level_3", "postal_code"];
@@ -52,8 +53,27 @@ async function suggest(query, config) {
     .map((p) => ({ placeId: p.placeId, description: p.text?.text || "" }));
 }
 
-// Resolve a placeId to { lat, lon, city, country, zip }. `zip` may be null for a
-// whole city; `lat`/`lon` always come from Google (server-side, never the client).
+// Best-effort representative postal code for coordinates (used when a city has no
+// postal code of its own). Never throws — a missing ZIP shouldn't fail a create.
+async function reverseZip(lat, lon, key, timeoutMs) {
+  try {
+    const res = await googleFetch(
+      `${GEOCODE_URL}?latlng=${lat},${lon}&result_type=postal_code&key=${key}`,
+      {},
+      timeoutMs
+    );
+    if (!res.ok) return null;
+    const body = await res.json();
+    const comps = body.results?.[0]?.address_components || [];
+    return comps.find((c) => (c.types || []).includes("postal_code"))?.long_name || null;
+  } catch {
+    return null;
+  }
+}
+
+// Resolve a placeId to { lat, lon, city, country, zip }. For a whole city (no
+// postal code of its own) we reverse-geocode the coordinates to a representative
+// one. `lat`/`lon` always come from Google (server-side, never the client).
 async function details(placeId, config) {
   const key = requireKey(config);
   const url = `${DETAILS_URL}/${encodeURIComponent(placeId)}?fields=addressComponents,formattedAddress,location`;
@@ -73,14 +93,14 @@ async function details(placeId, config) {
     find("administrative_area_level_2")?.longText ||
     null;
 
-  return {
-    lat: body.location?.latitude ?? null,
-    lon: body.location?.longitude ?? null,
-    city,
-    country: find("country")?.shortText || null,
-    zip: find("postal_code")?.longText || null,
-    description: body.formattedAddress || null,
-  };
+  const lat = body.location?.latitude ?? null;
+  const lon = body.location?.longitude ?? null;
+  let zip = find("postal_code")?.longText || null;
+  if (!zip && typeof lat === "number" && typeof lon === "number") {
+    zip = await reverseZip(lat, lon, key, config.google.timeoutMs);
+  }
+
+  return { lat, lon, city, country: find("country")?.shortText || null, zip, description: body.formattedAddress || null };
 }
 
 module.exports = { suggest, details };
