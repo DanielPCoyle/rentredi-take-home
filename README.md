@@ -19,7 +19,7 @@ create / read / update / delete.
 
 ## Requirements coverage
 
-> **Live demo:** _add your Railway URL_ · **Local:** `http://localhost:8080`
+> **Live demo:** <https://rentredi-sandbox-production.up.railway.app> · **Local:** `http://localhost:8080`
 
 Where each requirement from the brief is met in the code:
 
