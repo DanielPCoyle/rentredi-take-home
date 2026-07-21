@@ -1,0 +1,28 @@
+{
+  "name": "nodejs-user-management-short-take-home",
+  "version": "1.0.0",
+  "description": "CRUD user API with OpenWeatherMap location enrichment and a React frontend",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "node --test",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "dotenv": "16.4.5",
+    "express": "4.19.2",
+    "firebase-admin": "12.3.1",
+    "pino": "9.3.2",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.47.2",
+    "nodemon": "2.0.12",
+    "supertest": "7.0.0"
+  },
+  "keywords": []
+}
