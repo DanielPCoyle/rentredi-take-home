@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "firebase": "^12.16.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "reactfire": "^4.2.4",
     "three": "^0.185.1",
     "three-globe": "^2.31.0"
