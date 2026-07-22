@@ -337,3 +337,9 @@ Structured JSON via pino. Every request gets a child logger with a request id;
 one line is logged on completion (method, path, status, duration). Validation
 failures and expected client errors log at `warn`; upstream/DB/unexpected errors
 log at `error` with the full error object.
+
+
+
+
+# AI Driven Development
+This project was built entirely through an AI-driven development workflow using Claude Code and OpenAI Codex. I use higher-capability reasoning models to plan the architecture, features, and integrations, then delegate implementation tasks to smaller, more cost-efficient models. The coding agents also validate their work through automated Vitest test suites and end-to-end browser testing with Playwright MCP, creating a development process that is both fast and quality-focused. 
