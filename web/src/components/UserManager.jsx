@@ -8,9 +8,40 @@ import { track } from "../analytics.js";
 // the initial critical path a fresh page-load audit measures.
 const Globe = lazy(() => import("./Globe.jsx"));
 
-// Shared UI for both data sources (live ReactFire + API polling): the create
+// Shimmer placeholder that mirrors a UserCard's shape, so the first load fills
+// the same layout the real cards will — no jump when the data arrives.
+function SkeletonCard() {
+  return (
+    <div className="card skeleton-card" aria-hidden="true">
+      <div className="sk sk-title" />
+      <div className="sk sk-sub" />
+      <div className="sk-rows">
+        <div className="sk sk-row" />
+        <div className="sk sk-row" />
+        <div className="sk sk-row" />
+        <div className="sk sk-row" />
+      </div>
+      <div className="sk-actions">
+        <div className="sk sk-btn" />
+        <div className="sk sk-btn" />
+      </div>
+    </div>
+  );
+}
+
+// Spinning ring shown while the Three.js globe chunk loads.
+function GlobeLoader() {
+  return (
+    <div className="globe-fallback" role="status" aria-live="polite">
+      <div className="globe-loader" aria-hidden="true" />
+      <span className="globe-loader-text">Loading globe…</span>
+    </div>
+  );
+}
+
+// Shared UI for both data sources (live Firebase RTDB + API polling): the create
 // form, then a two-column layout of the locations list and the globe.
-export default function UserManager({ users, source, onChanged }) {
+export default function UserManager({ users, source, onChanged, loading = false }) {
   const [form, setForm] = useState({ name: "", zip: "", country: "US" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -119,8 +150,15 @@ export default function UserManager({ users, source, onChanged }) {
       {error && <div className="error">{error}</div>}
 
       <div className="home">
-        <div className="home-list">
-          {users.length === 0 ? (
+        <div className="home-list" aria-busy={loading || undefined}>
+          {loading ? (
+            <>
+              <span className="visually-hidden" role="status">Loading users…</span>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : users.length === 0 ? (
             <div className="empty">No users yet. Add one above.</div>
           ) : (
             [...users].reverse().map((u) => (
@@ -138,11 +176,11 @@ export default function UserManager({ users, source, onChanged }) {
         <div className="home-globe">
           <div className="globe-shell">
             {interacted ? (
-              <Suspense fallback={<div className="globe-fallback">Loading globe…</div>}>
+              <Suspense fallback={<GlobeLoader />}>
                 <Globe locations={globeLocations} focus={focus} />
               </Suspense>
             ) : (
-              <div className="globe-fallback">Loading globe…</div>
+              <GlobeLoader />
             )}
           </div>
         </div>

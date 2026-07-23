@@ -11,8 +11,11 @@ import UserManager from "./components/UserManager.jsx";
 // calls require("react") — under Vite's rolldown bundler that throws at runtime
 // ("require is not defined") and blanked the page. firebase/database's onValue
 // does the same job directly, with no extra dependency.
-export default function LiveRoot({ config }) {
-  const [users, setUsers] = useState(null);
+// `initialUsers` seeds the list from the snapshot the app already fetched, so
+// switching from the polling view to this live view is data->data — no "loading"
+// gate blanks the already-visible UI (that was the reported flicker).
+export default function LiveRoot({ config, initialUsers = null }) {
+  const [users, setUsers] = useState(initialUsers);
 
   useEffect(() => {
     // Guard against re-init (StrictMode double-mount, remounts): reuse the app.
@@ -27,12 +30,9 @@ export default function LiveRoot({ config }) {
     return unsubscribe;
   }, [config]);
 
-  if (users === null) {
-    return (
-      <div className="wrap">
-        <p>Loading users…</p>
-      </div>
-    );
-  }
-  return <UserManager users={users} source="live" onChanged={() => {}} />;
+  // users == null only before the very first snapshot with no seed: show the
+  // skeleton rather than a bare "Loading users…" that replaces the whole page.
+  return (
+    <UserManager users={users ?? []} loading={users == null} source="live" onChanged={() => {}} />
+  );
 }

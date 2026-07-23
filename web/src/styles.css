@@ -300,3 +300,57 @@ button:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
   font-weight: 600;
   text-align: center;
 }
+
+/* ── Loading states ─────────────────────────────────────────────────────────
+   Skeleton cards (first list load) + a spinning ring for the globe. Both are
+   theme-aware (built from CSS vars) and honor prefers-reduced-motion. */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; border: 0;
+}
+
+/* Shimmer: a light band sweeping across a neutral fill. --border -> --surface
+   gives a subtle, brand-neutral sheen in both light and dark themes. */
+@keyframes sk-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.sk {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--border) 25%, var(--surface) 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.5s ease-in-out infinite;
+}
+.skeleton-card { pointer-events: none; }
+.sk-title { height: 18px; width: 55%; margin-bottom: 10px; }
+.sk-sub   { height: 12px; width: 38%; margin-bottom: 16px; }
+.sk-rows  { display: flex; flex-direction: column; gap: 9px; }
+.sk-row   { height: 11px; }
+.sk-row:nth-child(1) { width: 92%; }
+.sk-row:nth-child(2) { width: 78%; }
+.sk-row:nth-child(3) { width: 85%; }
+.sk-row:nth-child(4) { width: 70%; }
+.sk-actions { display: flex; gap: 8px; margin-top: 16px; }
+.sk-btn { height: 34px; flex: 1; border-radius: 8px; }
+
+/* Globe: a masked conic-gradient ring that spins, over the shell's soft glow. */
+.globe-fallback { flex-direction: column; gap: 14px; }
+.globe-loader {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 25%, var(--brand) 90%, var(--brand) 100%);
+  -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 5px), #000 calc(100% - 4px));
+          mask: radial-gradient(farthest-side, #0000 calc(100% - 5px), #000 calc(100% - 4px));
+  animation: globe-spin 0.9s linear infinite;
+}
+@keyframes globe-spin { to { transform: rotate(360deg); } }
+.globe-loader-text { color: var(--muted); font-size: 0.85rem; letter-spacing: 0.02em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk { animation: none; }
+  .globe-loader { animation-duration: 2.4s; }
+}
