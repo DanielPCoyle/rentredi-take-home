@@ -8,17 +8,19 @@ updates:
       time: "09:00"
       timezone: America/New_York
     open-pull-requests-limit: 5
+    # Major bumps landing unvalidated broke production: firebase-admin 12->14
+    # removed the namespaced credential API and crashed the server at boot.
+    # Majors are now a deliberate, manually-reviewed upgrade — dependabot only
+    # proposes minor/patch; bump a major yourself when you've validated it.
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
     groups:
       backend-minor-patch:
         update-types:
           - minor
           - patch
-      backend-test-stack:
-        patterns:
-          - "vitest"
-          - "@vitest/*"
-        update-types:
-          - major
 
   - package-ecosystem: npm
     directory: /web
@@ -28,24 +30,15 @@ updates:
       time: "09:15"
       timezone: America/New_York
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
     groups:
       frontend-minor-patch:
         update-types:
           - minor
           - patch
-      react-runtime:
-        patterns:
-          - "react"
-          - "react-dom"
-        update-types:
-          - major
-      vite-toolchain:
-        patterns:
-          - "vite"
-          - "@vitejs/plugin-react"
-          - "vite-plugin-pwa"
-        update-types:
-          - major
 
   - package-ecosystem: github-actions
     directory: /
