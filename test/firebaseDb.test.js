@@ -3,7 +3,7 @@
 // credential mapping is covered with no network and no real project.
 const fs = require("fs");
 const assert = require("node:assert");
-const { createFirebaseDb } = require("../src/db/firebase");
+const { createFirebaseDb, defaultAdmin } = require("../src/db/firebase");
 
 // A minimal in-memory stand-in for the firebase-admin Realtime Database API.
 function makeAdmin() {
@@ -117,4 +117,17 @@ test("skips initializeApp when an app already exists", () => {
   admin.apps.push({}); // simulate an already-initialized app
   createFirebaseDb({ databaseURL: URL }, admin);
   assert.equal(admin.initializeApp.mock.calls.length, 0);
+});
+
+// Regression guard for the firebase-admin v12 -> v14 upgrade, which removed the
+// legacy namespaced API (`admin.credential`, `admin.apps`, `admin.database()`)
+// and crashed production at startup. The default adapter must re-expose that
+// exact shape from the real (modular) SDK.
+test("defaultAdmin() adapts the real firebase-admin v14 API to the namespaced shape", () => {
+  const real = defaultAdmin();
+  assert.ok(Array.isArray(real.apps), "admin.apps must be an array (was undefined in v14)");
+  assert.equal(typeof real.initializeApp, "function");
+  assert.equal(typeof real.credential.cert, "function");
+  assert.equal(typeof real.credential.applicationDefault, "function");
+  assert.equal(typeof real.database, "function");
 });

@@ -1,9 +1,32 @@
 const fs = require("fs");
 
-// Firebase Realtime Database driver (the assignment's bonus). `firebase-admin` is
-// required lazily so the default in-memory path never needs credentials loaded.
-// `admin` is injectable purely for testing (defaults to the real SDK).
-function createFirebaseDb(firebaseConfig, admin = require("firebase-admin")) {
+// firebase-admin v14 removed the legacy namespaced API (`admin.credential`,
+// `admin.apps`, `admin.database()`) — those moved to modular entrypoints
+// (`firebase-admin/app`, `firebase-admin/database`). This adapter re-exposes just
+// the surface this driver (and its injected-mock tests) use, keeping the
+// dependency-injection seam stable across the upgrade. Required lazily so the
+// default in-memory path never loads credentials.
+function defaultAdmin() {
+  const app = require("firebase-admin/app");
+  const adminDatabase = require("firebase-admin/database");
+  // Direct references (not wrappers) — the modular functions ignore `this`, so
+  // `admin.initializeApp(...)` / `admin.database()` call through correctly.
+  return {
+    get apps() {
+      return app.getApps();
+    },
+    initializeApp: app.initializeApp,
+    credential: {
+      applicationDefault: app.applicationDefault,
+      cert: app.cert,
+    },
+    database: adminDatabase.getDatabase,
+  };
+}
+
+// Firebase Realtime Database driver (the assignment's bonus). `admin` is
+// injectable purely for testing (defaults to the real SDK via the adapter above).
+function createFirebaseDb(firebaseConfig, admin = defaultAdmin()) {
   const { databaseURL, serviceAccount } = firebaseConfig;
 
   if (!databaseURL) {
@@ -61,4 +84,4 @@ function resolveCredential(admin, serviceAccount) {
   return admin.credential.cert(JSON.parse(raw));
 }
 
-module.exports = { createFirebaseDb };
+module.exports = { createFirebaseDb, defaultAdmin };
