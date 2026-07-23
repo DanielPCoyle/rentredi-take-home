@@ -90,7 +90,7 @@ export default function UserManager({ users, source, onChanged }) {
         <h1>Users</h1>
         <div className="page-actions">
           <span className={"badge" + (source === "live" ? " live" : "")}>
-            {source === "live" ? "Live · Firebase RTDB (ReactFire)" : "API polling"}
+            {source === "live" ? "Live · Firebase RTDB" : "API polling"}
           </span>
           <button type="button" className="new-btn" onClick={() => setFormOpen(true)}>+ New</button>
         </div>
