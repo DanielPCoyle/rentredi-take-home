@@ -10,8 +10,8 @@ import { initAnalytics } from "./analytics.js";
 const LiveRoot = lazy(() => import("./live.jsx"));
 
 // Data source A: poll the API (works with any backend, no Firebase needed).
-function PolledUsers() {
-  const [users, setUsers] = useState([]);
+function PolledUsers({ initialUsers = null }) {
+  const [users, setUsers] = useState(initialUsers);
   const load = useCallback(async () => {
     try {
       const json = await api("GET", "/api/users");
@@ -29,13 +29,16 @@ function PolledUsers() {
       window.removeEventListener(USERS_CHANGED_EVENT, load);
     };
   }, [load]);
-  return <UserManager users={users} source="poll" onChanged={load} />;
+  // Before the first response (and with no seed) show the skeleton, not an
+  // empty "No users yet" that flips to a full list a moment later.
+  return <UserManager users={users ?? []} loading={users == null} source="poll" onChanged={load} />;
 }
 
 export default function App() {
   // Render the polling UI immediately (no loading gate → no layout shift). If the
-  // backend reports a Firebase web config, upgrade to the live ReactFire source.
+  // backend reports a Firebase web config, upgrade to the live source.
   const [firebase, setFirebase] = useState(null);
+  const [seedUsers, setSeedUsers] = useState(null); // last-known list; seeds every view
   const online = useOnlineStatus();
 
   useEffect(() => {
@@ -51,21 +54,29 @@ export default function App() {
     })();
   }, []);
 
-  // Keep the offline cache warm. The live (Firebase) path reads over a WebSocket
-  // the service worker can't cache, so it never touches /api/users — leaving the
-  // offline fallback with nothing to show. Proactively fetch it on load and each
-  // time connectivity returns; the SW stores that snapshot for offline reads.
-  // No interval — this is a cache warmer, not a poll (PolledUsers still polls).
+  // Keep the offline cache warm AND capture the snapshot as a seed. The live
+  // (Firebase) path reads over a WebSocket the service worker can't cache, so it
+  // never touches /api/users — leaving the offline fallback with nothing to show.
+  // Fetch it on load and each time connectivity returns; the SW stores that
+  // snapshot for offline reads, and it seeds the live/poll views so switching
+  // data source never blanks an already-visible list.
   useEffect(() => {
-    const warm = () => fetch("/api/users").catch(() => {});
+    const warm = () =>
+      fetch("/api/users")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => j && setSeedUsers(j.data))
+        .catch(() => {});
     warm();
     window.addEventListener("online", warm);
     return () => window.removeEventListener("online", warm);
   }, []);
 
-  // Offline: the Firebase live path needs a WebSocket the service worker can't
-  // cache (and web RTDB has no disk persistence), so fall back to polling
-  // /api/users, which the service worker serves from cache while offline.
+  // Upgrade to live only once we hold a seed to hand it, so the swap is
+  // data->data with no "loading" gate in between (the reported flicker). Until
+  // then — and offline, where RTDB's uncacheable WebSocket won't work — poll
+  // /api/users, which the service worker serves from cache.
+  const live = firebase && online && seedUsers != null;
+
   return (
     <>
       <Topbar />
@@ -74,12 +85,12 @@ export default function App() {
           Offline — changes will sync when your connection returns
         </div>
       )}
-      {firebase && online ? (
-        <Suspense fallback={<PolledUsers />}>
-          <LiveRoot config={firebase} />
+      {live ? (
+        <Suspense fallback={<UserManager users={seedUsers} source="live" onChanged={() => {}} />}>
+          <LiveRoot config={firebase} initialUsers={seedUsers} />
         </Suspense>
       ) : (
-        <PolledUsers />
+        <PolledUsers initialUsers={seedUsers} />
       )}
     </>
   );
