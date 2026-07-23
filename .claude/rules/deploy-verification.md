@@ -38,3 +38,15 @@ branch had *never* actually run; production had been served from manual
 4. **Keep a rollback ready.** When redeploying a branch that has never run in
    prod, know the last-good deployment id up front so recovery is one
    `deploymentRollback` call, not an investigation.
+5. **A green frontend build is not a rendering app.** `vite build` succeeding
+   does not mean the bundle runs. A CJS dependency (e.g. reactfire) can emit a
+   runtime `require()` under the rolldown bundler that throws only in the
+   browser. Load the built app in a real browser and check the console — and
+   specifically test a **service-worker-served reload**, not just a fresh load:
+   the SW changes module-eval order and surfaces crashes a first paint hides
+   (this is how a "blank screen after hard refresh" slips past CI).
+6. **A PWA deploy strands returning visitors on asset-hash changes.** When the
+   asset hashes change, an old service worker can serve a stale shell that
+   references now-404 chunks. `registerType: "autoUpdate"` self-heals within a
+   reload, but verify a returning-visitor (SW-controlled) load actually recovers
+   before calling a deploy done.
