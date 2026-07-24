@@ -10,7 +10,7 @@ import { initAnalytics } from "./analytics.js";
 const LiveRoot = lazy(() => import("./live.jsx"));
 
 // Data source A: poll the API (works with any backend, no Firebase needed).
-function PolledUsers({ initialUsers = null }) {
+function PolledUsers({ initialUsers = null, online = true }) {
   const [users, setUsers] = useState(initialUsers);
   const load = useCallback(async () => {
     try {
@@ -31,7 +31,7 @@ function PolledUsers({ initialUsers = null }) {
   }, [load]);
   // Before the first response (and with no seed) show the skeleton, not an
   // empty "No users yet" that flips to a full list a moment later.
-  return <UserManager users={users ?? []} loading={users == null} source="poll" onChanged={load} />;
+  return <UserManager users={users ?? []} loading={users == null} source="poll" onChanged={load} online={online} />;
 }
 
 export default function App() {
@@ -86,11 +86,11 @@ export default function App() {
         </div>
       )}
       {live ? (
-        <Suspense fallback={<UserManager users={seedUsers} source="live" onChanged={() => {}} />}>
-          <LiveRoot config={firebase} initialUsers={seedUsers} />
+        <Suspense fallback={<UserManager users={seedUsers} source="live" onChanged={() => {}} online={online} />}>
+          <LiveRoot config={firebase} initialUsers={seedUsers} online={online} />
         </Suspense>
       ) : (
-        <PolledUsers initialUsers={seedUsers} />
+        <PolledUsers initialUsers={seedUsers} online={online} />
       )}
     </>
   );

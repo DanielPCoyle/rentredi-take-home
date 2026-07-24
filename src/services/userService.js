@@ -1,5 +1,5 @@
 const db = require("../db");
-const { resolveLocation } = require("./locationService");
+const { resolveLocation, resolveLocationQuery } = require("./locationService");
 const { NotFoundError } = require("../errors");
 const logger = require("../logger");
 
@@ -9,14 +9,15 @@ const logger = require("../logger");
 function createUserService(config) {
   // Resolve the stored location fields from a ZIP via OpenWeatherMap.
   // Coordinates always come from the provider, never from the client.
-  async function resolveLocationFor({ zip, country }) {
+  async function resolveLocationFor({ zip, country, locationQuery }) {
+    if (locationQuery) return resolveLocationQuery(locationQuery, config);
     const countryCode = country || config.owm.defaultCountry;
     const location = await resolveLocation(zip, countryCode, config);
     return { zip, country: countryCode, record: location };
   }
 
-  async function create({ name, zip, country }) {
-    const r = await resolveLocationFor({ zip, country });
+  async function create({ name, zip, country, locationQuery }) {
+    const r = await resolveLocationFor({ zip, country, locationQuery });
     const now = new Date().toISOString();
     const user = await db.create({
       name,
@@ -26,7 +27,7 @@ function createUserService(config) {
       createdAt: now,
       updatedAt: now,
     });
-    logger.info({ userId: user.id, zip: r.zip }, "user created");
+    logger.info({ userId: user.id, zip: r.zip, country: r.country }, "user created");
     return user;
   }
 
@@ -44,8 +45,17 @@ function createUserService(config) {
     const existing = await db.get(id);
     if (!existing) throw new NotFoundError(`User "${id}" not found`);
 
-    const next = { ...patch, updatedAt: new Date().toISOString() };
+    const { locationQuery, ...fields } = patch;
+    const next = { ...fields, updatedAt: new Date().toISOString() };
     if (patch.country) next.country = patch.country;
+
+    if (locationQuery) {
+      const r = await resolveLocationFor({ locationQuery });
+      Object.assign(next, r.record, { zip: r.zip, country: r.country });
+      const user = await db.update(id, next);
+      logger.info({ userId: id, zip: r.zip, country: r.country }, "location query changed — refetched location");
+      return user;
+    }
 
     // Only call the external location API when the ZIP (or country) actually
     // changes. Otherwise keep the previously resolved coordinates.

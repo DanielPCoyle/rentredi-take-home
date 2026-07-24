@@ -14,7 +14,7 @@ import UserManager from "./components/UserManager.jsx";
 // `initialUsers` seeds the list from the snapshot the app already fetched, so
 // switching from the polling view to this live view is data->data — no "loading"
 // gate blanks the already-visible UI (that was the reported flicker).
-export default function LiveRoot({ config, initialUsers = null }) {
+export default function LiveRoot({ config, initialUsers = null, online = true }) {
   const [users, setUsers] = useState(initialUsers);
 
   useEffect(() => {
@@ -33,6 +33,6 @@ export default function LiveRoot({ config, initialUsers = null }) {
   // users == null only before the very first snapshot with no seed: show the
   // skeleton rather than a bare "Loading users…" that replaces the whole page.
   return (
-    <UserManager users={users ?? []} loading={users == null} source="live" onChanged={() => {}} />
+    <UserManager users={users ?? []} loading={users == null} source="live" onChanged={() => {}} online={online} />
   );
 }

@@ -12,6 +12,7 @@
     "firebase": "^12.16.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-select": "^5.10.2",
     "three": "^0.185.1",
     "three-globe": "^2.31.0"
   },

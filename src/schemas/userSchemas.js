@@ -22,15 +22,26 @@ const country = z
   .length(2, "country must be a 2-letter ISO code")
   .transform((c) => c.toUpperCase());
 
+const locationQuery = z
+  .string()
+  .trim()
+  .min(2, "city or postal code is required")
+  .max(120, "city or postal code is too long")
+  .regex(/^[\p{L}\p{N} .,'-]+$/u, "city or postal code contains invalid characters");
+
 // Create: name + zip (OpenWeatherMap), plus an optional country.
 // Still `.strict()` so untrusted fields (id/lat/lon/timezone) are rejected.
 const createUserSchema = z
   .object({
     name,
-    zip,
+    zip: zip.optional(),
     country: country.optional(),
+    locationQuery: locationQuery.optional(),
   })
-  .strict();
+  .strict()
+  .refine((body) => body.locationQuery || body.zip, {
+    message: "city or postal code is required",
+  });
 
 // Update: any subset, but at least one field, and still no untrusted fields.
 const updateUserSchema = z
@@ -38,10 +49,11 @@ const updateUserSchema = z
     name: name.optional(),
     zip: zip.optional(),
     country: country.optional(),
+    locationQuery: locationQuery.optional(),
   })
   .strict()
   .refine((body) => Object.keys(body).length > 0, {
-    message: "at least one field (name, zip, country) is required",
+    message: "at least one field (name, zip, country, locationQuery) is required",
   });
 
 // Route param. Non-empty string covers both UUIDs (memory) and Firebase push keys.

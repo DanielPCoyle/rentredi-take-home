@@ -9,9 +9,14 @@ function cardFor(page, name) {
   return page.locator(".card", { hasText: name });
 }
 
-async function createUser(page, name, zip = "78701") {
+// Online create uses the single city/ZIP autocomplete (OWM geocoding, mocked in
+// e2e): type a query, pick the first suggestion, submit.
+async function createUser(page, name, query = "Austin") {
   await page.getByPlaceholder("Name").fill(name);
-  await page.getByPlaceholder("ZIP (e.g. 78701)").fill(zip);
+  const loc = page.locator("#location");
+  await loc.click();
+  await loc.fill(query);
+  await page.locator(".location-select__option").first().click();
   await page.getByRole("button", { name: "Add user" }).click();
   await expect(cardFor(page, name)).toBeVisible();
 }
@@ -55,10 +60,9 @@ test("deletes a user", async ({ page }) => {
   await expect(cardFor(page, name)).toHaveCount(0);
 });
 
-test("shows a validation error for a malformed zip", async ({ page }) => {
+test("shows a validation error when no location is chosen", async ({ page }) => {
   await page.getByPlaceholder("Name").fill(uniqueName("Bad"));
-  await page.getByPlaceholder("ZIP (e.g. 78701)").fill("!!");
-  await page.getByRole("button", { name: "Add user" }).click();
+  await page.getByRole("button", { name: "Add user" }).click(); // no city/ZIP picked
 
   await expect(page.locator(".error")).toBeVisible();
 });

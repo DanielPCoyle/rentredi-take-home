@@ -4,6 +4,7 @@ const express = require("express");
 const compression = require("compression");
 const { requestLogger } = require("./middleware/requestLogger");
 const { notFoundHandler, errorHandler } = require("./middleware/errorHandler");
+const { createLocationRouter } = require("./routes/locationRoutes");
 const { createUserRouter } = require("./routes/userRoutes");
 
 // App factory: builds the Express app but does NOT listen, so tests can drive it
@@ -34,6 +35,7 @@ function createApp(config) {
   // ReactFire's live Realtime Database subscription.
   app.get("/api/config", (req, res) => res.json({ firebase: config.webFirebase, gaId: config.gaId }));
 
+  app.use("/api/locations", createLocationRouter(config));
   app.use("/api/users", createUserRouter(config));
 
   app.use(notFoundHandler);

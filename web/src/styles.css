@@ -129,7 +129,7 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; co
 .new-btn { display: none; padding: 8px 14px; } /* mobile only — desktop shows the form inline */
 .form-panel-backdrop, .form-close { display: none; } /* modal chrome — mobile only */
 
-form.create { display: grid; grid-template-columns: 2fr 1fr 0.8fr auto; gap: 10px; margin: 22px 0; }
+form.create { display: grid; grid-template-columns: 2fr 1.6fr auto; gap: 10px; margin: 22px 0; }
 
 input {
   background: var(--input-bg);
@@ -353,4 +353,71 @@ button:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .sk { animation: none; }
   .globe-loader { animation-duration: 2.4s; }
+}
+
+/* ── Location autocomplete (create form) ────────────────────────────────────
+   Online: one react-select/async input (city or ZIP → OWM geocoding).
+   Offline: a ZIP + native country pair, since suggestions need the network. */
+
+.offline-location-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 10px;
+  min-width: 0;
+}
+.country-native-select {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  width: 100%;
+  font-family: inherit;
+  cursor: pointer;
+}
+.country-native-select:focus { outline: 2px solid var(--sky); outline-offset: 1px; border-color: transparent; }
+
+.location-select { min-width: 0; }
+.location-select .location-select__control {
+  min-height: 42px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 0.95rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.location-select .location-select__control:hover { border-color: var(--border); }
+.location-select .location-select__control--is-focused {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--sky);
+}
+.location-select .location-select__value-container { padding: 0 10px; }
+.location-select .location-select__placeholder { color: var(--muted); }
+.location-select .location-select__single-value,
+.location-select .location-select__input-container { color: var(--text); }
+.location-select .location-select__indicator { color: var(--muted); }
+.location-select .location-select__indicator:hover { color: var(--text); }
+.location-select .location-select__indicator-separator { background: var(--border); }
+.location-select .location-select__menu {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  z-index: 120;
+}
+.location-select .location-select__menu-list { padding: 4px; }
+.location-select .location-select__option {
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+.location-select .location-select__option--is-focused { background: rgba(36, 162, 210, 0.14); }
+.location-select .location-select__option--is-selected {
+  background: var(--brand);
+  color: var(--brand-ink);
 }
