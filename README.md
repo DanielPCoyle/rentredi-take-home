@@ -252,6 +252,16 @@ unknown ZIP → `400` (bad client input), provider 5xx/other → `502`, timeout 
 upstream/unexpected errors log at `error` with the full stack. Logging is
 structured JSON via **pino**, with a per-request child logger (see *Logging*).
 
+Optional **Sentry** error monitoring layers on top, gated entirely on DSN env
+vars (unset ⇒ complete no-op — tests/CI/local untouched). Server: `src/instrument.js`
+initializes `@sentry/node` (required first in `src/index.js`) and
+`setupExpressErrorHandler` reports unhandled 5xx while the JSON envelope above
+still formats the response. Browser: set `SENTRY_DSN_WEB` (a public DSN, kept
+separate from the server-only `SENTRY_DSN`, delivered at runtime via `/api/config`)
+and `web/src/sentry.js` inits `@sentry/react`, with a `Sentry.ErrorBoundary` in
+`entry-client.jsx` (SSR-safe: renders no DOM, so hydration still matches). See
+`.env.example`.
+
 ### Frontend: from CDN prototype to Vite; live reads via firebase/database
 
 The frontend began as a single no-build HTML file (React via CDN) to honor "runs

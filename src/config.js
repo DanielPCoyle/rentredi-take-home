@@ -18,6 +18,12 @@ const envSchema = z.object({
   // /api/config; absent -> the frontend loads no analytics.
   GA_MEASUREMENT_ID: z.string().optional(),
 
+  // Public browser Sentry DSN (optional), exposed to the browser via /api/config
+  // so the frontend can report client errors. A DSN is a public client key —
+  // kept separate from the server-only SENTRY_DSN so browser + server errors can
+  // target different projects. Absent -> the frontend loads no Sentry.
+  SENTRY_DSN_WEB: z.string().optional(),
+
   // OpenWeatherMap
   OWM_API_KEY: z.string().min(1, "OWM_API_KEY is required"),
   OWM_BASE_URL: z.string().url().default("https://api.openweathermap.org/data/2.5"),
@@ -73,6 +79,7 @@ function loadConfig(env = process.env) {
     port: e.PORT,
     logLevel: e.LOG_LEVEL,
     gaId: e.GA_MEASUREMENT_ID || null,
+    sentryDsn: e.SENTRY_DSN_WEB || null, // public browser DSN, handed to the browser via /api/config
     owm: {
       apiKey: e.OWM_API_KEY,
       baseUrl: e.OWM_BASE_URL,
