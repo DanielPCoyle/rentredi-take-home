@@ -16,7 +16,8 @@ superseded-by:
 ## Context
 
 The demo grants **public read** of the `/users` node in the Realtime Database —
-exactly what ReactFire's live subscription needs, and fine for a take-home where
+exactly what the live RTDB subscription (`firebase/database`'s `onValue`) needs,
+and fine for a take-home where
 the data is throwaway (see [[ADR-0007-firebase-adc-rules]]). The README always
 flagged this as a demo-only assumption. The intake survey (2026-07-21) resolved
 the open question: **yes, production should gate `/users` reads behind auth.**
@@ -28,8 +29,9 @@ world-readable in a real deployment.
 For any non-demo deployment, remove the public read on `/users` and require an
 authenticated identity to read. Concretely: tighten `database.rules.json` so
 `.read` on `/users` requires `auth != null` (or a stricter per-owner rule), and
-give the browser a real Firebase Auth session so ReactFire subscribes as an
-authenticated user rather than anonymously. Writes are unaffected — they already
+give the browser a real Firebase Auth session so the live subscription
+(`firebase/database`'s `onValue`) reads as an authenticated user rather than
+anonymously. Writes are unaffected — they already
 go only through the admin SDK on the validated API path ([[Trust Boundary]]).
 
 ## Alternatives considered

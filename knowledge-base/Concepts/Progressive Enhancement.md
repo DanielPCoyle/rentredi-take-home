@@ -18,8 +18,9 @@ Nothing breaks if the enhancement is skipped; it just runs in a simpler mode.
 Three independent ladders follow the same shape. Data layer: in-memory `Map`
 by default, upgrading to Firebase Realtime Database when `DB_DRIVER=firebase`
 (or `FIREBASE_DATABASE_URL` is set) — see [[Repository Facade]]. Frontend
-reads: API polling by default, upgrading to live ReactFire subscriptions the
-moment a full web Firebase config (`FIREBASE_API_KEY`, `FIREBASE_PROJECT_ID`,
+reads: API polling by default, upgrading to a live `firebase/database`
+`onValue` subscription the moment a full web Firebase config
+(`FIREBASE_API_KEY`, `FIREBASE_PROJECT_ID`,
 `FIREBASE_DATABASE_URL`, etc.) is present — `src/config.js` only builds
 `webFirebase` when those essentials all exist, otherwise it's `null` and the
 frontend falls back to polling. Analytics: no GA4 script loads at all unless
