@@ -29,8 +29,12 @@ three files (`web/index.html`, `web/public/robots.txt`,
 
 ## Why
 
-The app is a globe-heavy React SPA — everything renders client-side after JS
-executes. Without server-visible markup, a crawler or answer engine that
+The app is a globe-heavy React app. When this experiment was written it
+rendered entirely client-side after JS executed (`main` has since added shell
+SSR — see `.claude/rules/ssr-safety.md` — so the shell now ships as
+server-rendered HTML; the injected metadata + `<noscript>` fallback below
+remain the belt-and-suspenders layer). Without server-visible markup, a
+crawler or answer engine that
 doesn't execute JavaScript (or executes it unreliably) sees an essentially
 empty page: no title context, no description, no structured data, nothing to
 cite. **AEO (Answer Engine Optimization)** extends the same concern to LLM-
