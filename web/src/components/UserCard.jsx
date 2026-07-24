@@ -76,7 +76,7 @@ export default function UserCard({ user, onChanged, onSelect, selected }) {
   };
 
   return (
-    <div className={"card clickable" + (selected ? " selected" : "")} onClick={onSelect}>
+    <div className={"card clickable" + (selected ? " selected" : "")} data-uid={user.id} onClick={onSelect}>
       <h3>
         <button
           className="card-title"
