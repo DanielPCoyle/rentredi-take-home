@@ -14,10 +14,12 @@ import { isDaytime } from "../util.js";
 //
 // Loaded via a lazy chunk that is facade-loaded on first interaction (see
 // UserManager), so Three.js never touches the initial critical path.
-export default function Globe({ locations, focus }) {
+export default function Globe({ locations, focus, onPinClick }) {
   const mountRef = useRef(null);
   const api = useRef({});
   const locsRef = useRef(locations || []);
+  const onPinClickRef = useRef(onPinClick);
+  onPinClickRef.current = onPinClick;
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -121,10 +123,33 @@ export default function Globe({ locations, focus }) {
     const yAxis = new THREE.Vector3(0, 1, 0);
     const xAxis = new THREE.Vector3(1, 0, 0);
 
+    // Nearest visible point to a screen position (client coords), or null.
+    const nearestPoint = (clientX, clientY) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      const mx = clientX - rect.left;
+      const my = clientY - rect.top;
+      globe.updateMatrixWorld(true);
+      const camDir = camera.position.clone().normalize();
+      let best = null;
+      let bestDist = 20;
+      for (const d of locsRef.current) {
+        const c = globe.getCoords(d.lat, d.lon, 0.02);
+        const p = new THREE.Vector3(c.x, c.y, c.z).applyMatrix4(globe.matrixWorld);
+        if (p.clone().normalize().dot(camDir) <= 0.05) continue;
+        p.project(camera);
+        const sx = (p.x * 0.5 + 0.5) * rect.width;
+        const sy = (-p.y * 0.5 + 0.5) * rect.height;
+        const dist = Math.hypot(sx - mx, sy - my);
+        if (dist < bestDist) { bestDist = dist; best = d; }
+      }
+      return best;
+    };
+
     const onDown = (e) => {
       const a = api.current;
       a.dragging = true;
       a.last = { x: e.clientX, y: e.clientY };
+      a.downXY = { x: e.clientX, y: e.clientY };
       a.targetQuat = null;
       a.idle = false;
       clearTimeout(a.resume);
@@ -143,25 +168,8 @@ export default function Globe({ locations, focus }) {
           .premultiply(new THREE.Quaternion().setFromAxisAngle(xAxis, dy * DRAG_K));
         return;
       }
-      const rect = renderer.domElement.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      globe.updateMatrixWorld(true);
-      const camDir = camera.position.clone().normalize();
-      let best = null;
-      let bestDist = 20;
-      for (const d of locsRef.current) {
-        const c = globe.getCoords(d.lat, d.lon, 0.02);
-        const p = new THREE.Vector3(c.x, c.y, c.z).applyMatrix4(globe.matrixWorld);
-        if (p.clone().normalize().dot(camDir) <= 0.05) continue;
-        p.project(camera);
-        const sx = (p.x * 0.5 + 0.5) * rect.width;
-        const sy = (-p.y * 0.5 + 0.5) * rect.height;
-        const dist = Math.hypot(sx - mx, sy - my);
-        if (dist < bestDist) { bestDist = dist; best = d; }
-      }
-      a.hover = best;
-      renderer.domElement.style.cursor = best ? "pointer" : "grab";
+      a.hover = nearestPoint(e.clientX, e.clientY);
+      renderer.domElement.style.cursor = a.hover ? "pointer" : "grab";
     };
 
     const onUp = (e) => {
@@ -172,6 +180,12 @@ export default function Globe({ locations, focus }) {
       renderer.domElement.releasePointerCapture?.(e.pointerId);
       clearTimeout(a.resume);
       a.resume = setTimeout(() => { a.idle = true; }, 4000);
+      // A press that barely moved is a click, not a drag: select the pin under it.
+      const moved = a.downXY ? Math.hypot(e.clientX - a.downXY.x, e.clientY - a.downXY.y) : 999;
+      if (moved < 6) {
+        const hit = nearestPoint(e.clientX, e.clientY);
+        if (hit) onPinClickRef.current?.(hit);
+      }
     };
 
     const onLeave = () => { api.current.hover = null; };

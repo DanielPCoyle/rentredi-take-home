@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import UserCard from "./UserCard.jsx";
 import { COUNTRIES } from "../countries.js";
@@ -48,6 +48,7 @@ export default function UserManager({ users, source, onChanged, loading = false 
   const [focus, setFocus] = useState(null);
   const [interacted, setInteracted] = useState(false);
   const [formOpen, setFormOpen] = useState(false); // mobile: the create form opens in a modal
+  const listRef = useRef(null);
 
   // On the first real interaction, load the globe + react-select country picker.
   useEffect(() => {
@@ -77,6 +78,14 @@ export default function UserManager({ users, source, onChanged, loading = false 
   }, [formOpen]);
 
   const setCountry = (code) => setForm((f) => ({ ...f, country: code }));
+
+  // Bring the focused location's card into view (list click, add, or globe pin click).
+  useEffect(() => {
+    if (!focus) return;
+    listRef.current
+      ?.querySelector(`[data-uid="${focus.id}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  }, [focus]);
 
   // A fresh object each call so re-clicking the same location re-triggers the pulse.
   function focusOn(u) {
@@ -150,7 +159,7 @@ export default function UserManager({ users, source, onChanged, loading = false 
       {error && <div className="error">{error}</div>}
 
       <div className="home">
-        <div className="home-list" aria-busy={loading || undefined}>
+        <div className="home-list" ref={listRef} aria-busy={loading || undefined}>
           {loading ? (
             <>
               <span className="visually-hidden" role="status">Loading users…</span>
@@ -177,7 +186,7 @@ export default function UserManager({ users, source, onChanged, loading = false 
           <div className="globe-shell">
             {interacted ? (
               <Suspense fallback={<GlobeLoader />}>
-                <Globe locations={globeLocations} focus={focus} />
+                <Globe locations={globeLocations} focus={focus} onPinClick={focusOn} />
               </Suspense>
             ) : (
               <GlobeLoader />
