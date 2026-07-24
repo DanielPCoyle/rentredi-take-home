@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { Toaster } from "react-hot-toast";
-import { api, USERS_CHANGED_EVENT } from "./api.js";
+import toast from "react-hot-toast";
+import { api, USERS_CHANGED_EVENT, SYNC_COMPLETE_EVENT, pendingCount, onPendingChange } from "./api.js";
 import UserManager from "./components/UserManager.jsx";
 import Topbar from "./components/Topbar.jsx";
 import { useOnlineStatus } from "./useOnlineStatus.js";
@@ -40,6 +41,9 @@ export default function App() {
   // backend reports a Firebase web config, upgrade to the live source.
   const [firebase, setFirebase] = useState(null);
   const [seedUsers, setSeedUsers] = useState(null); // last-known list; seeds every view
+  const [pending, setPending] = useState(pendingCount); // offline mutations awaiting sync
+  const [justSynced, setJustSynced] = useState(0); // transient "Synced N" confirmation
+  const [syncWarnings, setSyncWarnings] = useState([]); // ops that couldn't be synced
   const online = useOnlineStatus();
 
   useEffect(() => {
@@ -53,6 +57,27 @@ export default function App() {
         /* stay on polling */
       }
     })();
+  }, []);
+
+  // Offline feedback loop: track the pending count for the banner, and react to
+  // each replay's result — confirm a successful sync, and warn (+ toast) for any
+  // queued change the server rejected on reconnect.
+  useEffect(() => onPendingChange(setPending), []);
+  useEffect(() => {
+    const onSync = (e) => {
+      const { synced, failed } = e.detail;
+      if (synced > 0) {
+        setJustSynced(synced);
+        setTimeout(() => setJustSynced(0), 4000);
+      }
+      if (failed.length > 0) {
+        setSyncWarnings(failed);
+        failed.forEach((f) => toast.error(`Couldn't sync ${f.label}`));
+        setTimeout(() => setSyncWarnings([]), 8000);
+      }
+    };
+    window.addEventListener(SYNC_COMPLETE_EVENT, onSync);
+    return () => window.removeEventListener(SYNC_COMPLETE_EVENT, onSync);
   }, []);
 
   // Keep the offline cache warm AND capture the snapshot as a seed. The live
@@ -85,6 +110,17 @@ export default function App() {
       {!online && (
         <div className="offline-banner" role="status" aria-live="polite">
           Offline — changes will sync when your connection returns
+          {pending > 0 ? ` · ${pending} change${pending > 1 ? "s" : ""} queued` : ""}
+        </div>
+      )}
+      {syncWarnings.length > 0 && online && (
+        <div className="offline-banner warning" role="alert">
+          {syncWarnings.length} queued change{syncWarnings.length > 1 ? "s" : ""} couldn’t be synced (already changed on the server)
+        </div>
+      )}
+      {justSynced > 0 && online && (
+        <div className="offline-banner" role="status" aria-live="polite">
+          Synced {justSynced} offline change{justSynced > 1 ? "s" : ""}
         </div>
       )}
       {live ? (

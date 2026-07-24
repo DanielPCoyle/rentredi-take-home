@@ -300,6 +300,12 @@ button:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
   font-weight: 600;
   text-align: center;
 }
+/* Red variant: a queued change the server rejected on reconnect. */
+.offline-banner.warning {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-bottom: 1px solid var(--danger);
+}
 
 /* ── Loading states ─────────────────────────────────────────────────────────
    Skeleton cards (first list load) + a spinning ring for the globe. Both are
