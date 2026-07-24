@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { Toaster } from "react-hot-toast";
 import { api, USERS_CHANGED_EVENT } from "./api.js";
 import UserManager from "./components/UserManager.jsx";
 import Topbar from "./components/Topbar.jsx";
@@ -79,6 +80,7 @@ export default function App() {
 
   return (
     <>
+      <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
       <Topbar />
       {!online && (
         <div className="offline-banner" role="status" aria-live="polite">
