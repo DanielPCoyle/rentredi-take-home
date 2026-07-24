@@ -33,7 +33,8 @@ function createApp(config) {
   // Public runtime config for the browser. `firebase` is the client web config
   // (or null); when null the frontend falls back to API polling instead of
   // ReactFire's live Realtime Database subscription.
-  app.get("/api/config", (req, res) => res.json({ firebase: config.webFirebase, gaId: config.gaId }));
+  app.get("/api/config", (req, res) =>
+    res.json({ firebase: config.webFirebase, gaId: config.gaId, sentryDsn: config.sentryDsn }));
 
   app.use("/api/locations", createLocationRouter(config));
   app.use("/api/users", createUserRouter(config));

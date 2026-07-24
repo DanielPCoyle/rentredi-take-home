@@ -408,6 +408,13 @@ and the whole path is a no-op — tests, CI, and DSN-less local runs are
 untouched. `SENTRY_ENVIRONMENT` and `SENTRY_TRACES_SAMPLE_RATE` (default `0`,
 errors only) tune it. See `.env.example`.
 
+The **frontend** mirrors this: set `SENTRY_DSN_WEB` (a public browser DSN, kept
+separate from the server DSN so the two can target different projects) and the
+server hands it to the browser via `/api/config` alongside `gaId`/`firebase`.
+`web/src/sentry.js` inits `@sentry/react` on demand, and `main.jsx` wraps the app
+in a `Sentry.ErrorBoundary` (render-crash fallback instead of a blank screen).
+Unset `SENTRY_DSN_WEB` and the browser loads no Sentry and makes no calls.
+
 
 
 
