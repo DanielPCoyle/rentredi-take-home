@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getDatabase, ref, onValue } from "firebase/database";
+import toast from "react-hot-toast";
 import UserManager from "./components/UserManager.jsx";
 
 // Live reads come straight from the Realtime Database. Writes still go through
@@ -16,6 +17,9 @@ import UserManager from "./components/UserManager.jsx";
 // gate blanks the already-visible UI (that was the reported flicker).
 export default function LiveRoot({ config, initialUsers = null, online = true }) {
   const [users, setUsers] = useState(initialUsers);
+  // Baseline for the live add/delete toasts, seeded from the first RTDB snapshot
+  // (not `initialUsers`, so it diffs against the real live state — no false toasts).
+  const seen = useRef(null);
 
   useEffect(() => {
     // Guard against re-init (StrictMode double-mount, remounts): reuse the app.
@@ -25,7 +29,23 @@ export default function LiveRoot({ config, initialUsers = null, online = true })
       const val = snapshot.val() || {};
       // Records already carry their id (the push key); keep the same shape the
       // API-polling path produces so UserManager stays source-agnostic.
-      setUsers(Object.entries(val).map(([id, user]) => ({ id, ...user })));
+      const list = Object.entries(val).map(([id, user]) => ({ id, ...user }));
+
+      // Live add/delete toasts, broadcast to every connected client: RTDB pushes
+      // each /users change here, so we diff against the last-seen set and toast
+      // the delta. The first snapshot seeds the baseline (no toasts on load).
+      const curr = new Map(list.map((u) => [u.id, u.name]));
+      if (seen.current !== null) {
+        for (const [id, name] of curr) {
+          if (!seen.current.has(id)) toast.success(`${name || "A user"} added`);
+        }
+        for (const [id, name] of seen.current) {
+          if (!curr.has(id)) toast(`${name || "A user"} removed`, { icon: "🗑️" });
+        }
+      }
+      seen.current = curr;
+
+      setUsers(list);
     });
     return unsubscribe;
   }, [config]);
