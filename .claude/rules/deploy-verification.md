@@ -50,3 +50,19 @@ branch had *never* actually run; production had been served from manual
    references now-404 chunks. `registerType: "autoUpdate"` self-heals within a
    reload, but verify a returning-visitor (SW-controlled) load actually recovers
    before calling a deploy done.
+7. **The Railway CLI log-stream timing out is NOT a failed deploy.** `railway up -c`
+   (and `--detach`) can drop the log stream with `reqwest error / operation timed
+   out` while the build + deploy proceed normally server-side. Never treat the CLI
+   exit as the deploy verdict. Confirm the real outcome with `railway status` /
+   `railway logs --deployment` (look for the container's own start line — e.g.
+   `serving … on 0.0.0.0:$PORT`), then hit the generated domain for HTTP 200 AND
+   load it in a real browser with a clean console. Also: a Railway `status`
+   snapshot taken seconds after upload can show `deploymentStopped:true` with empty
+   `instances` before the container settles — re-poll rather than concluding failure.
+8. **Hosting the Understand-Anything dashboard statically:** build the dashboard
+   package with `vite build --config vite.config.demo.ts --base=/` (demo mode skips
+   the localhost token gate and loads the graph from `${BASE_URL}knowledge-graph.json`),
+   after copying the project's `.ua/knowledge-graph.json` (+ `meta.json`) into the
+   package `public/`. Serve the built `dist/` with a zero-dep Node static server bound
+   to `0.0.0.0:$PORT` with an SPA fallback. Restore the plugin cache's sample
+   `public/knowledge-graph.json` afterward so future `/understand` runs are unaffected.

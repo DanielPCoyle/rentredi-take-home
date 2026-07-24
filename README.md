@@ -186,6 +186,65 @@ The browser needs read access to `/users`; `database.rules.json` already grants
 public read for the demo (client writes are denied — the admin SDK bypasses
 rules and owns all writes). Deploy it with `firebase deploy --only database`.
 
+## Deploy to Firebase Cloud Functions (Hosting + Functions) — optional
+
+The app also runs on **Firebase Cloud Functions**, with the static frontend on
+**Firebase Hosting** — with no code changes, because `createApp()` is a
+listen-free Express factory. Hosting serves `web/dist` from its CDN and rewrites
+`/api/**` and `/health` to a single `api` function (`index.js` at the repo root
+wraps the same app). `firebase-admin` authenticates with the function's own
+service account (Application Default Credentials), so no service-account file is
+needed.
+
+**Requirements:**
+
+- The Firebase project must be on the **Blaze** (pay-as-you-go) plan — Cloud
+  Functions and outbound calls to OpenWeatherMap are unavailable on Spark.
+- Use **`firebase-tools` ≥ 14** (this repo pins it as a devDep — run `npx
+  firebase`). `firebase-functions` v7 (required by `firebase-admin` 14) is not
+  supported by older CLIs.
+- `firebase-functions` **rejects any `.env` with reserved-prefix keys**
+  (`FIREBASE_*`, `GOOGLE_*`, `GCLOUD_*`) — which this app's local `.env` uses. So
+  run `firebase deploy` from CI (no `.env`) or move your local `.env` aside first.
+  The function takes its config through a secret + non-reserved params instead
+  (see below); `firebase-admin` authenticates with the function's own service
+  account (ADC), so no `FIREBASE_SERVICE_ACCOUNT` is needed.
+
+```bash
+npx firebase login
+npx firebase use rentredi-sbx-20928
+
+# The only real secret (Secret Manager):
+npx firebase functions:secrets:set OWM_API_KEY
+
+# Optional non-secret params via a git-ignored .env.<projectId> — NON-reserved
+# names only. RTDB_URL empty -> derived from the project's own default RTDB.
+# The WEB_FB_* trio is optional and only enables browser live-sync (else polling):
+cat > .env.rentredi-sbx-20928 <<'ENV'
+RTDB_URL=
+WEB_FB_API_KEY=
+WEB_FB_APP_ID=
+WEB_FB_SENDER_ID=
+ENV
+
+# Builds web/dist (hosting predeploy) + deploys hosting, the function, and DB rules.
+# Run this where no reserved-key .env is present (CI, or move .env aside):
+npx firebase deploy
+```
+
+Verify locally first with the emulator (no Blaze needed) — it boots the real
+function against the wrapped app:
+
+```bash
+printf 'OWM_MOCK=1\nDB_DRIVER=memory\nRTDB_URL=\nWEB_FB_API_KEY=\nWEB_FB_APP_ID=\nWEB_FB_SENDER_ID=\n' > .env.local
+printf 'OWM_API_KEY=test-key\n' > .secret.local   # emulator reads secrets here
+mv .env .env.bak                                   # reserved keys break env loading
+npx firebase emulators:start --only functions
+# GET  http://127.0.0.1:5001/<project>/us-central1/api/health          -> {"status":"ok"}
+# POST http://127.0.0.1:5001/<project>/us-central1/api/api/users       -> 201
+# (restore afterward: rm .env.local .secret.local && mv .env.bak .env)
+```
+
 ## Decisions Explained
 
 A walkthrough of the significant choices in this codebase, the reasoning behind
