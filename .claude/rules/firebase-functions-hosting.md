@@ -75,3 +75,22 @@ The actual production deploy additionally requires the **Blaze** plan.
 
 `.env.local`, `.secret.local`, and `.firebase/` are emulator scratch and may hold
 secrets — keep them git-ignored. Restore the real `.env` after emulator runs.
+
+## 8. A non-zero `firebase deploy` exit can leave Hosting un-finalized
+
+On a first combined `firebase deploy`, the post-functions **Artifact Registry
+cleanup-policy** step prompts and, unattended, makes the whole command exit
+**non-zero** — which can abort before the Hosting **release** is finalized. Symptom:
+the function is live, but `https://<project>.web.app` serves Firebase's **"Site
+Not Found"** page indefinitely (not normal propagation — `hosting:channel:list`
+shows a `live` release yet the domain 404s). Fixes:
+
+- Pre-empt the prompt: run `firebase deploy --force`, or set the policy first with
+  `firebase functions:artifacts:setpolicy --force`.
+- If Hosting is already stuck on "Site Not Found" with a release present, re-run
+  `firebase deploy --only hosting` — it finalizes + releases cleanly (exit 0) and
+  the `.web.app` domain serves within a minute.
+
+Verify the live site by loading `https://<project>.web.app` in a real browser
+(SPA from the CDN + `/api/**` rewrite to the function) with a clean console —
+not just the direct `…cloudfunctions.net/api` URL, which only proves the function.
