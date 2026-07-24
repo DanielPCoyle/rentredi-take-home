@@ -64,10 +64,18 @@ function createApp(config) {
   // Public runtime config for the browser. `firebase` is the client web config
   // (or null); when null the frontend falls back to API polling instead of the
   // live Realtime Database subscription (firebase/database onValue).
-  app.get("/api/config", (req, res) => res.json({ firebase: config.webFirebase, gaId: config.gaId }));
+  app.get("/api/config", (req, res) =>
+    res.json({ firebase: config.webFirebase, gaId: config.gaId, sentryDsn: config.sentryDsn }));
 
   app.use("/api/locations", createLocationRouter(config));
   app.use("/api/users", createUserRouter(config));
+
+  // Report unhandled errors (status >= 500) to Sentry when configured. No-op
+  // otherwise. Must sit after the routes and before our JSON error handler,
+  // which still runs (Sentry's handler captures then calls next).
+  if (process.env.SENTRY_DSN) {
+    require("@sentry/node").setupExpressErrorHandler(app);
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);

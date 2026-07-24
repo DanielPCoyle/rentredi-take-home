@@ -3,6 +3,7 @@ Task: User CRUD endpoints with OpenWeatherMap location enrichment + React fronte
 See README.md for setup, architecture, assumptions, and the creative addition.
 */
 
+require("./instrument"); // must be first: initializes Sentry (no-op without SENTRY_DSN) + loads dotenv
 require("dotenv").config();
 
 const { loadConfig } = require("./config");
