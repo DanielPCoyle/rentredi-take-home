@@ -1,5 +1,10 @@
 const QUEUE_KEY = "rentredi-offline-user-mutations";
 const USERS_CHANGED_EVENT = "rentredi-users-changed";
+// Feedback signals for the offline UX: PENDING_CHANGED fires whenever the queue
+// length changes (drives the banner count); SYNC_COMPLETE carries the replay
+// result { synced, failed } so the UI can confirm or warn.
+const PENDING_CHANGED_EVENT = "rentredi-pending-changed";
+const SYNC_COMPLETE_EVENT = "rentredi-sync-complete";
 
 function readQueue() {
   try {
@@ -12,6 +17,28 @@ function readQueue() {
 function writeQueue(queue) {
   localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
   window.dispatchEvent(new Event(USERS_CHANGED_EVENT));
+  window.dispatchEvent(new Event(PENDING_CHANGED_EVENT));
+}
+
+// How many offline mutations are waiting to sync.
+export function pendingCount() {
+  return readQueue().length;
+}
+
+// Subscribe to the pending count; returns an unsubscribe fn. Fires immediately
+// with the current count so callers don't need a separate initial read.
+export function onPendingChange(cb) {
+  const handler = () => cb(pendingCount());
+  window.addEventListener(PENDING_CHANGED_EVENT, handler);
+  handler();
+  return () => window.removeEventListener(PENDING_CHANGED_EVENT, handler);
+}
+
+// Short human label for a queued op, used in "couldn't sync X" warnings.
+function describeOp(op) {
+  const name = op.body?.name ? `${op.body.name}: ` : "";
+  const location = op.body?.locationQuery || [op.body?.zip, op.body?.country].filter(Boolean).join(", ");
+  return `${name}${location || op.path}`;
 }
 
 function temporaryUser(body, id) {
@@ -112,27 +139,42 @@ async function request(method, path, body) {
 
 let replaying = false;
 export async function replayOfflineMutations() {
-  if (replaying || !navigator.onLine) return;
+  if (replaying || !navigator.onLine) return { synced: 0, failed: [] };
   replaying = true;
 
+  let synced = 0;
+  const failed = [];
   try {
     let queue = readQueue();
     while (queue.length) {
       const mutation = queue[0];
       try {
         await request(mutation.method, mutation.path, mutation.body);
+        synced += 1;
         queue = queue.slice(1);
         writeQueue(queue);
       } catch (error) {
-        // Keep network failures queued. A real API validation/conflict response
-        // should stop replay too, preserving the mutation for user recovery.
-        console.error("Failed to replay offline mutation", mutation, error);
-        break;
+        if (error instanceof TypeError) {
+          // Still offline / network dropped mid-replay: keep the rest queued and
+          // stop; the next reconnect retries from here.
+          break;
+        }
+        // A real API error (validation/conflict, e.g. editing a user deleted on
+        // the server): this op can never succeed, so drop it, record it for a
+        // warning, and continue with the rest.
+        failed.push({ label: describeOp(mutation), message: error.message || "Could not sync this change" });
+        queue = queue.slice(1);
+        writeQueue(queue);
       }
     }
   } finally {
     replaying = false;
   }
+
+  if (synced > 0 || failed.length > 0) {
+    window.dispatchEvent(new CustomEvent(SYNC_COMPLETE_EVENT, { detail: { synced, failed } }));
+  }
+  return { synced, failed };
 }
 
 if (typeof window !== "undefined") {
@@ -165,4 +207,4 @@ export async function api(method, path, body) {
   }
 }
 
-export { USERS_CHANGED_EVENT };
+export { USERS_CHANGED_EVENT, SYNC_COMPLETE_EVENT };
