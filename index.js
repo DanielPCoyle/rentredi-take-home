@@ -31,6 +31,13 @@ const WEB_FB_API_KEY = defineString("WEB_FB_API_KEY", { default: "" });
 const WEB_FB_APP_ID = defineString("WEB_FB_APP_ID", { default: "" });
 const WEB_FB_SENDER_ID = defineString("WEB_FB_SENDER_ID", { default: "" });
 
+// Sentry DSNs (optional). A DSN is a public client key, so both are plain params
+// under non-reserved names (no Secret Manager needed). Unset -> Sentry stays a
+// complete no-op on this deploy. SENTRY_DSN drives server-side error capture;
+// SENTRY_DSN_WEB is handed to the browser via /api/config.
+const SENTRY_DSN = defineString("SENTRY_DSN", { default: "" });
+const SENTRY_DSN_WEB = defineString("SENTRY_DSN_WEB", { default: "" });
+
 // Build the app once per warm instance, lazily — so the runtime has injected the
 // secret + params before loadConfig() reads process.env.
 let app;
@@ -59,6 +66,19 @@ function getApp() {
       process.env.FIREBASE_APP_ID = WEB_FB_APP_ID.value();
       process.env.FIREBASE_MESSAGING_SENDER_ID = WEB_FB_SENDER_ID.value();
     }
+
+    // Sentry: publish the DSNs into the env names the app reads, then init before
+    // createApp so the guarded Express error handler is registered. src/index.js
+    // (Railway/local) requires instrument.js up front; the Functions entry is a
+    // separate boot path, so it must do the same here or Sentry never runs.
+    if (SENTRY_DSN.value()) process.env.SENTRY_DSN = SENTRY_DSN.value();
+    if (SENTRY_DSN_WEB.value()) process.env.SENTRY_DSN_WEB = SENTRY_DSN_WEB.value();
+    require("./src/instrument"); // initializes Sentry (no-op without SENTRY_DSN)
+    // ponytail: express was required at module top (for createApp), before this
+    // init, so Sentry logs "express is not instrumented" — harmless here because
+    // tracesSampleRate=0 disables the perf tracing that would use it; error
+    // capture via setupExpressErrorHandler is unaffected. If you ever enable
+    // tracing, init Sentry before requiring src/app.js (params permitting).
 
     const config = loadConfig();
     db.init(config);

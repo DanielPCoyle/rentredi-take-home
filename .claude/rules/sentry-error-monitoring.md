@@ -61,6 +61,29 @@ environment.
    it, and confirm it renders **and reloads** (SW-controlled) with a clean
    console before declaring it done.
 
+## Firebase Functions entry is a SEPARATE boot path
+
+`src/index.js` (the `.listen()` entry used by `npm start`/Railway) requires
+`instrument.js` first, but the Cloud Functions entry `index.js` wraps `createApp`
+in `onRequest` and **never loads `src/index.js`**. Wiring Sentry only into
+`src/index.js` leaves it completely dead on the `.web.app` deploy — the exact
+"green deploy, doesn't run" trap of `deploy-verification.md`.
+
+- In `index.js`, declare `SENTRY_DSN` + `SENTRY_DSN_WEB` as `defineString` params
+  (both are public client keys — no `defineSecret`/Secret Manager needed, which
+  also dodges the `.secret.local` 403 trap), map them into `process.env` inside
+  `getApp()`, then `require("./src/instrument")` before `createApp`.
+- **Known ceiling:** `index.js` requires `src/app.js` (→ express) at module top,
+  before this runtime init, so Sentry logs `express is not instrumented`. Harmless
+  while `tracesSampleRate=0` (error capture is unaffected); only matters if perf
+  tracing is later enabled.
+- **Emulator verify (firebase rule #4 bites again):** every `defineString` param —
+  including `RTDB_URL`, `WEB_FB_*`, and now `SENTRY_DSN*` — must have a value in
+  `.env.local` or `firebase emulators:start` prompts on stdin and hangs, even when
+  the param has `default: ""`. Provide all of them (empty is fine); set the two
+  `SENTRY_DSN*` to a valid-format DSN and confirm `/api/config` echoes the web DSN
+  and `/health`+create+reject behave.
+
 ## Docs
 
 `SENTRY_DSN` is a server-only secret — never commit a real one. `SENTRY_DSN_WEB`
