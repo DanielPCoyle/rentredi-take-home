@@ -215,6 +215,7 @@ export default function UserManager({ users, source, onChanged, loading = false,
                 user={u}
                 onChanged={onChanged}
                 onSelect={() => { track("location_select"); focusOn(u); }}
+                onSaved={focusOn}
                 selected={focus?.id === u.id}
                 online={online}
               />

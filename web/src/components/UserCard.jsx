@@ -13,7 +13,7 @@ function locationLabel(u) {
 // One user. View mode shows derived location + the live clock, and is clickable
 // to focus/pulse the globe; edit mode sends only the changed fields (so the
 // backend refetches location only when the location actually changes).
-export default function UserCard({ user, onChanged, onSelect, selected, online = true }) {
+export default function UserCard({ user, onChanged, onSelect, onSaved, selected, online = true }) {
   const [editing, setEditing] = useState(false);
   // locationOption seeds the autocomplete with the current location; picking a new
   // suggestion (query != "") is what triggers a re-resolve. zip/country are the
@@ -42,12 +42,18 @@ export default function UserCard({ user, onChanged, onSelect, selected, online =
         if (form.zip && form.zip !== user.zip) patch.zip = form.zip;
         if ((form.country || "") !== (user.country || "")) patch.country = form.country || undefined;
       }
+      // A location edit (not a name-only edit) moves the pin, so we recenter on it below.
+      const locationChanged = "locationQuery" in patch || "zip" in patch || "country" in patch;
+      let res;
       if (Object.keys(patch).length) {
-        await api("PUT", `/api/users/${user.id}`, patch);
+        res = await api("PUT", `/api/users/${user.id}`, patch);
         track("user_updated");
       }
       setEditing(false);
-      onChanged();
+      await onChanged();
+      // Recenter the globe on the updated pin after a location edit. Skip queued
+      // offline edits (no fresh coordinates until sync) and name-only edits.
+      if (locationChanged && res?.data && !res.queued) onSaved?.(res.data);
     } catch (e) {
       setError(e.message);
     } finally {
