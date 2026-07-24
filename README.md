@@ -397,6 +397,17 @@ one line is logged on completion (method, path, status, duration). Validation
 failures and expected client errors log at `warn`; upstream/DB/unexpected errors
 log at `error` with the full error object.
 
+### Error monitoring (Sentry) — optional
+
+Set `SENTRY_DSN` and the server reports unhandled 5xx errors to Sentry via
+`@sentry/node`. Initialization lives in `src/instrument.js`, required first in
+`src/index.js` so its auto-instrumentation patches http/express before anything
+else loads; `setupExpressErrorHandler` captures errors after the routes while the
+existing JSON error handler still formats the response. Leave `SENTRY_DSN` unset
+and the whole path is a no-op — tests, CI, and DSN-less local runs are
+untouched. `SENTRY_ENVIRONMENT` and `SENTRY_TRACES_SAMPLE_RATE` (default `0`,
+errors only) tune it. See `.env.example`.
+
 
 
 

@@ -38,6 +38,13 @@ function createApp(config) {
   app.use("/api/locations", createLocationRouter(config));
   app.use("/api/users", createUserRouter(config));
 
+  // Report unhandled errors (status >= 500) to Sentry when configured. No-op
+  // otherwise. Must sit after the routes and before our JSON error handler,
+  // which still runs (Sentry's handler captures then calls next).
+  if (process.env.SENTRY_DSN) {
+    require("@sentry/node").setupExpressErrorHandler(app);
+  }
+
   app.use(notFoundHandler);
   app.use(errorHandler);
 
