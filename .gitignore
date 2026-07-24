@@ -1,5 +1,8 @@
-node_modules/
-web/node_modules/
+# No trailing slash: also ignore a *symlinked* node_modules (a trailing-slash
+# pattern matches directories only, so `git add -A` in a worktree with a
+# node_modules symlink would otherwise commit it and break the Docker build).
+node_modules
+web/node_modules
 web/dist/
 .env
 service-account.json
