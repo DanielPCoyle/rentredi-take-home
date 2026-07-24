@@ -25,6 +25,7 @@ export default function LocationSelect({ inputId = "location", value, inputValue
       className="location-select"
       classNamePrefix="location-select"
       inputId={inputId}
+      instanceId={inputId}
       cacheOptions
       defaultOptions={false}
       loadOptions={loadLocationOptions}

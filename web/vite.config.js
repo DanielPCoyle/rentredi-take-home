@@ -5,9 +5,12 @@ import { VitePWA } from "vite-plugin-pwa";
 // Dev: Vite serves the UI on :5173 and proxies API calls to the Express backend
 // on :8080, so the browser talks to one origin. Prod: `vite build` -> dist/,
 // which Express serves directly (same origin, no proxy needed).
-export default defineConfig({
+// The PWA plugin only belongs in the client build — the SSR build (`vite build
+// --ssr`) has no service worker to generate. `isSsrBuild` lets us drop it there.
+export default defineConfig(({ isSsrBuild }) => ({
   plugins: [
     react(),
+    !isSsrBuild &&
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["rentredi-logo.svg", "icons/apple-touch-icon.png"],
@@ -54,4 +57,4 @@ export default defineConfig({
     },
   },
   build: { outDir: "dist" },
-});
+}));
