@@ -71,7 +71,7 @@ export default function UserCard({ user, onChanged, onSelect, selected, online =
   if (editing) {
     return (
       <div className="card">
-        <h3>{user.name}</h3>
+        <h2>{user.name}</h2>
         <div className="sub">Editing</div>
         <div className="edit">
           <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Name" />
@@ -116,7 +116,7 @@ export default function UserCard({ user, onChanged, onSelect, selected, online =
 
   return (
     <div className={"card clickable" + (selected ? " selected" : "")} data-uid={user.id} onClick={onSelect}>
-      <h3>
+      <h2>
         <button
           className="card-title"
           onClick={stop(onSelect)}
@@ -124,7 +124,7 @@ export default function UserCard({ user, onChanged, onSelect, selected, online =
         >
           {user.name}
         </button>
-      </h3>
+      </h2>
       <div className="sub">
         {user.city || "—"}
         {user.zip ? ` (${user.zip})` : ""}

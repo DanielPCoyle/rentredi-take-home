@@ -272,7 +272,7 @@ button:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
 .card.clickable { cursor: pointer; }
 .card.clickable:hover { border-color: var(--brand); }
 .card.selected { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand), var(--shadow); }
-.card h3 { margin: 0 0 4px; font-size: 1.1rem; color: var(--heading); }
+.card h2 { margin: 0 0 4px; font-size: 1.1rem; color: var(--heading); }
 .card-title {
   background: none; border: none; padding: 0; margin: 0;
   font: inherit; color: inherit; cursor: pointer; text-align: left;
