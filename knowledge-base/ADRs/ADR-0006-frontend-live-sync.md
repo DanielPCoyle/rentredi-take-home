@@ -7,9 +7,13 @@ deciders: Dan Coyle
 tags: [adr, frontend, firebase]
 ---
 
-# ADR-0006 — Vite + ReactFire live reads, polling fallback
+# ADR-0006 — Vite + ReactFire live reads, polling fallback (impl: firebase/database onValue)
 
 > **Status:** Accepted · **Date:** 2026-07-21 · Register: [[ADRs]] · ✅ Author-confirmed 2026-07-21
+>
+> **Implementation note:** the live-reads-vs-polling decision below still holds,
+> but the reads are no longer implemented with ReactFire — see
+> [Implementation note (superseded)](#implementation-note-superseded) below.
 
 ## Context
 
@@ -42,16 +46,37 @@ Firebase SDK. `firebase` is pinned to **v9** (`^9.23.0`) because
   and the validation trust boundary (RTDB rules deny client writes anyway).
 - **No code-split** — polling-mode users would pay for downloading the
   Firebase SDK they never use.
-- **`firebase` v10+** — breaks the `reactfire@4` peer dependency.
+- **`firebase` v10+** — breaks the `reactfire@4` peer dependency. *(No longer
+  applies — reactfire has since been removed; see the implementation note
+  below.)*
 
 ## Consequences
 
 - **Good:** the UI is live when Firebase is configured and fully functional
   when it isn't; polling users ship zero Firebase code.
 - **Cost:** two data-source paths to maintain (`PolledUsers` vs.
-  `LiveRoot`/`LiveUsers`), plus a pinned `firebase` v9 that can't be bumped
-  casually.
+  `LiveRoot`/`LiveUsers`). *(The "pinned `firebase` v9" cost no longer
+  applies — see the implementation note below.)*
 - **Follow-up:** none.
+
+## Implementation note (superseded)
+
+The decision above — live reads when Firebase is configured, polling
+otherwise, writes always through the API — is unchanged and still Accepted.
+Only the **implementation** of the live-read subscription changed:
+
+- Reads now use **`firebase/database`'s `onValue`** directly
+  (`initializeApp` / `getDatabase` / `ref` / `onValue` in `web/src/live.jsx`),
+  not ReactFire's `useDatabaseListData` / `FirebaseAppProvider` /
+  `DatabaseProvider`.
+- **Why:** reactfire is unmaintained and ships a CJS build that calls
+  `require("react")`. Under Vite's rolldown bundler that throws at runtime
+  (`require is not defined`) and blanked the page. `firebase/database`'s
+  `onValue` does the same job with no extra dependency and no CJS/ESM
+  mismatch.
+- **Consequence:** `firebase` is no longer pinned to v9 for a `reactfire@4`
+  peer dependency — it's now on v12 (`web/package.json`), and can be bumped
+  independently going forward.
 
 ## Related
 

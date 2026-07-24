@@ -46,22 +46,22 @@ flowchart TB
         FORM["UserManager / UserCard forms"] --> API["api.js fetch wrapper"] --> W["POST / PUT / DELETE /api/users"]
     end
     subgraph Reads
-        CFG["GET /api/config"] -->|firebase config present + online| LIVE["live.jsx (code-split)<br>ReactFire useDatabaseListData"]
+        CFG["GET /api/config"] -->|firebase config present + online| LIVE["live.jsx (code-split)<br>firebase/database onValue"]
         CFG -->|no firebase config, or offline| POLL["PolledUsers in App.jsx<br>GET /api/users every 5s"]
     end
 ```
 
 - **Writes → API, always.** Coordinates/timezone/id are never client-supplied.
-- **Reads → ReactFire live subscription** when `/api/config` reports a
-  Firebase web config *and* the browser is online — `live.jsx` subscribes to
-  the `users` node over a WebSocket; writes still go through the API and RTDB
-  pushes the change back, so `onChanged` is a no-op on that path.
+- **Reads → live `firebase/database` subscription** when `/api/config` reports
+  a Firebase web config *and* the browser is online — `live.jsx` calls
+  `onValue` on the `users` node over a WebSocket; writes still go through the
+  API and RTDB pushes the change back, so `onChanged` is a no-op on that path.
 - **Reads → API polling (fallback)** otherwise — `PolledUsers` polls
   `GET /api/users` every 5s. This is also what keeps the app runnable (and the
   e2e suite green) without a Firebase project, and what the service worker can
   cache for the offline banner.
-- `LiveRoot` (ReactFire + `firebase`) is `lazy()`-imported and code-split, so
-  the polling path never downloads the Firebase SDK.
+- `LiveRoot` (`firebase/database` + `firebase/app`) is `lazy()`-imported and
+  code-split, so the polling path never downloads the Firebase SDK.
 
 ## Module responsibilities — `src/`
 
@@ -85,7 +85,7 @@ flowchart TB
 | Module | Responsibility |
 |---|---|
 | `App.jsx` | Data-source selector: renders the polling UI immediately (no loading gate), fetches `/api/config`, and upgrades to the live `LiveRoot` (code-split) when a Firebase web config is present and the browser is online; also inits GA and warms the offline cache. |
-| `live.jsx` | ReactFire providers (`FirebaseAppProvider`, `DatabaseProvider`) + `useDatabaseListData` subscription on the `users` RTDB node. Only imported when Firebase is configured. |
+| `live.jsx` | `firebase/database`'s `onValue` subscription (via `initializeApp` / `getDatabase` / `ref`) on the `users` RTDB node — replaced ReactFire (unmaintained, CJS `require("react")` crash under Vite's rolldown bundler; see [[ADR-0006-frontend-live-sync]]). Only imported when Firebase is configured. |
 | `components/` | `UserManager.jsx` (create form + list + globe, shared by both data sources), `UserCard.jsx` (view/edit one user, sends only changed fields), `LocalClock.jsx` (creative addition — ticking local time from the stored offset/zone), `Topbar.jsx`, `ThemeToggle.jsx`, `Globe.jsx` (lazy three.js globe, loaded on first interaction). |
 | `api.js` / `util.js` | Thin `fetch` wrapper that unwraps `{ data }` / `{ error }` envelopes; formatting helpers (e.g. timezone label, local time string). |
 
@@ -94,6 +94,6 @@ flowchart TB
 - [[Request Lifecycle]] — one request traced through this exact map
 - [[ADRs]] — the reasoning behind each layer
 - [[ADR-0005-error-model]] — the typed-error / central-handler design
-- [[ADR-0006-frontend-live-sync]] — the ReactFire-vs-polling split
+- [[ADR-0006-frontend-live-sync]] — the live-vs-polling split (impl: `firebase/database` `onValue`)
 
 ← back to [[Architecture]]

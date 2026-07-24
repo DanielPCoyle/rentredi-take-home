@@ -23,9 +23,9 @@ schemas in `src/schemas/userSchemas.js` use Zod's `.strict()`, which actively
 not a silent strip, a hard failure, which is the more honest signal that
 something is wrong with the caller. On the frontend, the same boundary holds
 in a different shape: writes always go through the API so the server retains
-sole ownership of enrichment and validation, while reads may be live (ReactFire
-subscription) or polled — but never a path that lets the client write around
-the API.
+sole ownership of enrichment and validation, while reads may be live (a
+`firebase/database` `onValue` subscription) or polled — but never a path that
+lets the client write around the API.
 
 ## Why it matters
 

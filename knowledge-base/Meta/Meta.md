@@ -14,7 +14,7 @@ The vault's own scaffolding — how it was populated and how to keep it honest.
 ## Notes
 
 - [[Intake Survey]] — the questionnaire that shaped this vault. Pre-filled from the repo's README rationale + my answers; **blanks are flagged** for me to complete so the ADRs can be refined.
-- [[Glossary]] — terms of art used across the vault (ADC, RTDB, ReactFire, AEO, hermetic test, trust boundary, …).
+- [[Glossary]] — terms of art used across the vault (ADC, RTDB, ReactFire — historical, since replaced by `firebase/database` `onValue` — AEO, hermetic test, trust boundary, …).
 
 ## How this vault was built
 

@@ -14,8 +14,9 @@ tags: [adr, firebase, security]
 ## Context
 
 The live path needs two things at once: the backend needs admin credentials
-to write via `firebase-admin`, and the browser needs read access for
-ReactFire — without a long-lived secret sitting in the repo or on disk.
+to write via `firebase-admin`, and the browser needs read access for the live
+RTDB subscription (`firebase/database`'s `onValue`) — without a long-lived
+secret sitting in the repo or on disk.
 
 ## Decision
 
@@ -25,8 +26,8 @@ service-account JSON as the primary path — `createFirebaseDb` still accepts a
 `serviceAccount` (inline JSON or file path) for environments that need it, but
 ADC is what keeps a normal dev/deploy setup free of a committed secret file.
 `database.rules.json` grants `"users": { ".read": true, ".write": false }` —
-**public read** of `/users` (exactly what ReactFire's subscription needs) and
-**deny all client writes**; the admin SDK bypasses rules entirely, so every
+**public read** of `/users` (exactly what the live RTDB subscription needs)
+and **deny all client writes**; the admin SDK bypasses rules entirely, so every
 mutation still flows through the validated API. The default RTDB instance
 itself was provisioned over the Management REST API rather than the
 interactive `firebase init database` (the CLI command requires a TTY), using

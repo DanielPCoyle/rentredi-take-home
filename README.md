@@ -30,7 +30,7 @@ Where each requirement from the brief is met in the code:
 | 1 | CRUD endpoints | ✅ | `src/routes/userRoutes.js` — `POST /`, `GET /`, `GET /:id`, `PUT /:id`, `DELETE /:id` (201 / 200 / 200 / 200 / 204) |
 | 2 | Save users in a noSQL DB (**bonus: Firebase RTDB**) | ✅ **+ bonus** | `src/db/firebase.js` (`firebase-admin` RTDB), selected by `DB_DRIVER`; zero-setup in-memory default in `src/db/memory.js` |
 | 3 | Fields: `id, name, zip, latitude, longitude, timezone` | ✅ | `src/services/userService.js` → `{ id, name, zip, country, lat, lon, timezone, timezoneName, city, createdAt, updatedAt }` |
-| 4 | Create takes name + zip; fetch lat/lon/timezone from OpenWeatherMap | ✅ | `createUserSchema` (name, zip, country?); `src/services/locationService.js` calls the **current-weather** endpoint (`/data/2.5/weather`) — coordinates *and* timezone in one request |
+| 4 | Create takes name + zip; fetch lat/lon/timezone from OpenWeatherMap | ✅ | `createUserSchema` (name, plus either `zip`+`country?` or a free-text `locationQuery`); `src/services/locationService.js` calls the **current-weather** endpoint (`/data/2.5/weather`) — coordinates *and* timezone in one request. The UI's create form is a single "City or ZIP" autocomplete (`GET /api/locations/suggest`) that submits `locationQuery`, with a manual ZIP + country fallback shown only while offline. |
 | 5 | Update re-fetches lat/lon/timezone **only if the ZIP changes** | ✅ | `src/services/userService.js` — the `zipChanged` gate; a test asserts the external-call count stays flat on a name-only edit |
 | 6 | Connect a ReactJS front-end | ✅ | Vite + React app in `web/`, served by Express; full CRUD via `web/src/api.js` |
 | ★ | *“add something creative”* | ✅ | A live **per-user local clock** (`web/src/components/LocalClock.jsx`) ticking from the stored zone; plus a 3D globe, an installable offline PWA, GA4 analytics, light/dark theming, and a Vitest (~92%) + Playwright suite |
@@ -86,13 +86,14 @@ excluded). The Firebase driver is unit-tested via an injected in-memory
 Base path `/api/users`. Success envelope `{ "data": ... }`; error envelope
 `{ "error": { "code", "message", "details"? } }`.
 
-| Method | Path              | Body                          | Success | Notes |
-|--------|-------------------|-------------------------------|---------|-------|
-| POST   | `/api/users`      | `{ name, zip, country? }`     | 201     | Fetches lat/lon/timezone from OpenWeatherMap |
-| GET    | `/api/users`      | —                             | 200     | List all |
-| GET    | `/api/users/:id`  | —                             | 200     | 404 if missing |
-| PUT    | `/api/users/:id`  | `{ name?, zip?, country? }`   | 200     | Re-fetches location **only if ZIP/country changed** |
-| DELETE | `/api/users/:id`  | —                             | 204     | 404 if missing |
+| Method | Path              | Body / Query                                        | Success | Notes |
+|--------|-------------------|------------------------------------------------------|---------|-------|
+| POST   | `/api/users`      | `{ name, locationQuery }` or `{ name, zip, country? }` | 201     | Either a free-text `locationQuery` (city or ZIP) **or** `zip`/`country?` is required; fetches lat/lon/timezone from OpenWeatherMap |
+| GET    | `/api/users`      | —                                                    | 200     | List all |
+| GET    | `/api/users/:id`  | —                                                    | 200     | 404 if missing |
+| PUT    | `/api/users/:id`  | `{ name?, locationQuery? }` or `{ name?, zip?, country? }` | 200     | Re-fetches location **only if `locationQuery` is given, or the ZIP/country changed** |
+| DELETE | `/api/users/:id`  | —                                                    | 204     | 404 if missing |
+| GET    | `/api/locations/suggest` | `?q=<text>`                                    | 200     | City/ZIP autocomplete type-ahead (OpenWeatherMap `/geo/1.0` geocoding); powers the create form's "City or ZIP" field |
 
 **Status codes:** `400` validation / unknown ZIP · `404` not found ·
 `502` provider error · `504` provider timeout · `500` unexpected.
@@ -143,8 +144,8 @@ src/
 web/                       Vite + React frontend (built to web/dist, served by Express)
   vite.config.js           dev server + /api proxy → :8080
   src/
-    App.jsx                fetches /api/config → live (ReactFire) or polling source
-    live.jsx               ReactFire providers + live RTDB subscription (code-split)
+    App.jsx                fetches /api/config → live (firebase/database onValue) or polling source
+    live.jsx               firebase/database onValue live RTDB subscription (code-split)
     components/            UserManager, UserCard, LocalClock (the live-clock addition)
     api.js  util.js  styles.css
 test/users.test.js         unit/integration suite
@@ -166,13 +167,14 @@ FIREBASE_SERVICE_ACCOUNT=./service-account.json   # path or inline JSON
 (`push`/`set`/`once`/`update`/`remove`) — the same interface as the in-memory
 driver, so nothing else changes.
 
-### Live UI sync with ReactFire (optional)
+### Live UI sync via firebase/database (optional)
 
 When the **public web** Firebase config is also provided, the frontend uses
-**ReactFire** (`web/src/live.jsx`, code-split so polling mode never loads the
-Firebase SDK) to subscribe to the `users` node in the Realtime Database and
-update live — writes still go through the API, then RTDB pushes the change back.
-Without it, the UI falls back to polling `GET /api/users`. Add to `.env`:
+**`firebase/database`'s `onValue`** (`web/src/live.jsx`, code-split so polling
+mode never loads the Firebase SDK) to subscribe to the `users` node in the
+Realtime Database and update live — writes still go through the API, then RTDB
+pushes the change back. Without it, the UI falls back to polling
+`GET /api/users`. Add to `.env`:
 
 ```bash
 FIREBASE_API_KEY=...
@@ -250,20 +252,29 @@ unknown ZIP → `400` (bad client input), provider 5xx/other → `502`, timeout 
 upstream/unexpected errors log at `error` with the full stack. Logging is
 structured JSON via **pino**, with a per-request child logger (see *Logging*).
 
-### Frontend: from CDN prototype to Vite; ReactFire with a polling fallback
+### Frontend: from CDN prototype to Vite; live reads via firebase/database
 
 The frontend began as a single no-build HTML file (React via CDN) to honor "runs
-with zero setup." When ReactFire was added for live Realtime Database reads, it
-was migrated to a proper **Vite + React** app — ReactFire's natural habitat, with
-real dependencies, native JSX, and no CDN module-singleton fragility. The key
-rule is that **reads and writes take different paths**: writes always go through
-the API (so the server keeps ownership of location enrichment, validation, and
-the trust boundary), while reads are live via ReactFire's RTDB subscription *when
-Firebase is configured* and fall back to API polling otherwise. That fallback is
-what keeps the app runnable — and the E2E suite green — without a Firebase
-project. ReactFire/Firebase are **code-split** so the polling path never
-downloads the Firebase SDK, and `firebase` is pinned to **v9** because
-reactfire@4 peers on it.
+with zero setup." When live Realtime Database reads were added, it was migrated
+to a proper **Vite + React** app, with real dependencies, native JSX, and no CDN
+module-singleton fragility. The key rule is that **reads and writes take
+different paths**: writes always go through the API (so the server keeps
+ownership of location enrichment, validation, and the trust boundary), while
+reads are live via `firebase/database`'s **`onValue`** subscription
+(`web/src/live.jsx`) *when Firebase is configured* and fall back to API polling
+otherwise. That fallback is what keeps the app runnable — and the E2E suite
+green — without a Firebase project. The live path is **code-split** so the
+polling path never downloads the Firebase SDK.
+
+This live-reads path originally used **ReactFire**; it was removed because
+reactfire is unmaintained and ships a CJS build that calls `require("react")`,
+which throws under Vite's rolldown bundler (`require is not defined`) and
+blanked the page. `firebase/database`'s `onValue` does the same job directly,
+with no extra dependency — so `firebase` is no longer pinned to v9 for a
+`reactfire@4` peer and is now on **v12**. The live-vs-polling *decision* is
+unchanged; only this implementation detail changed. See
+[ADR-0006](knowledge-base/ADRs/ADR-0006-frontend-live-sync.md) in the
+knowledge base for the full record.
 
 ### Firebase provisioning: ADC over key files, least-privilege rules
 
@@ -271,7 +282,7 @@ For the live path, the backend authenticates with **Application Default
 Credentials** (`gcloud auth application-default login`) instead of a downloaded
 service-account JSON — so no long-lived secret file lives in the repo or on disk.
 The Realtime Database rules (`database.rules.json`) grant **public read of
-`/users`** (what ReactFire needs) and **deny all client writes** — writes only
+`/users`** (what the live RTDB subscription needs) and **deny all client writes** — writes only
 succeed through the admin SDK, which bypasses rules, keeping every mutation on the
 validated API path. The default RTDB instance was provisioned over the Management
 REST API because the CLI required an interactive `firebase init database`; the

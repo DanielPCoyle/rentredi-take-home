@@ -27,7 +27,7 @@ Architecture Decision Records for the RentRedi take-home. Each ADR states the
 | [[ADR-0003-refetch-on-change\|0003]] | Refetch location only when the ZIP/country changes | Accepted | `src/services/userService.js` |
 | [[ADR-0004-trust-boundary\|0004]] | Never trust client location data (`.strict()` schemas) | Accepted | `src/schemas/userSchemas.js` |
 | [[ADR-0005-error-model\|0005]] | Typed errors + one central handler | Accepted | `src/errors.js`, `src/middleware/errorHandler.js` |
-| [[ADR-0006-frontend-live-sync\|0006]] | Vite + ReactFire live reads, polling fallback | Accepted | `web/src/`, `web/src/live.jsx` |
+| [[ADR-0006-frontend-live-sync\|0006]] | Vite + live RTDB reads (firebase/database onValue), polling fallback | Accepted | `web/src/`, `web/src/live.jsx` |
 | [[ADR-0007-firebase-adc-rules\|0007]] | ADC over key files; least-privilege RTDB rules | Accepted | `database.rules.json`, `scripts/` |
 | [[ADR-0008-testing-strategy\|0008]] | Hermetic tests (Vitest + injectable deps) | Accepted | `test/`, `e2e/` |
 
@@ -44,6 +44,7 @@ for the next version, not the current state of `main`.
 | [[ADR-0009-auth-gated-reads\|0009]] | Gate `/users` reads behind auth in production | Proposed | survey → `op_auth = yes` |
 | [[ADR-0010-add-pagination-ratelimit-cache\|0010]] | Add pagination, rate-limiting, and caching next | Proposed | survey → `op_omissions = add` |
 | [[ADR-0011-merge-experiment-branches\|0011]] | Merge SEO/AEO to main; archive google-only | Accepted | survey → `op_branches` (resolved) |
+| [[ADR-0012-sentry-observability\|0012]] | Add Sentry for frontend and API observability | Proposed | `web/src/`, `src/` |
 
 ## By theme
 

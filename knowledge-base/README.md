@@ -48,7 +48,7 @@ alternatives turned down, and the consequences.
 3. [[ADR-0003-refetch-on-change|Refetch location only when the ZIP changes]] — don't spend a rate-limit slot on a name edit.
 4. [[ADR-0004-trust-boundary|Never trust client location data]] — `.strict()` schemas *reject* derived fields.
 5. [[ADR-0005-error-model|Typed errors + one central handler]] — one consistent JSON envelope.
-6. [[ADR-0006-frontend-live-sync|Vite + ReactFire with a polling fallback]] — reads and writes take different paths.
+6. [[ADR-0006-frontend-live-sync|Vite + live RTDB reads with a polling fallback]] (impl: `firebase/database` `onValue`; ReactFire was removed) — reads and writes take different paths.
 7. [[ADR-0007-firebase-adc-rules|ADC over key files, least-privilege rules]] — no long-lived secret on disk.
 8. [[ADR-0008-testing-strategy|Hermetic tests by construction]] — ~92% coverage, no network, no keys.
 
