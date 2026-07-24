@@ -7,9 +7,14 @@ service-account.json
 # Local tooling caches
 .impeccable/
 
-# Firebase CLI debug output
+# Firebase CLI debug output + emulator scratch / secrets
 firebase-debug.log
 *-debug.log
+.firebase/
+.env.local
+.env.*.local
+.secret.local
+.env.rentredi-sbx-20928
 
 # Playwright
 /test-results/

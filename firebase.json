@@ -1,5 +1,35 @@
 {
   "database": {
     "rules": "database.rules.json"
+  },
+  "functions": {
+    "source": ".",
+    "runtime": "nodejs22",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "web/**",
+      "knowledge-base/**",
+      "test/**",
+      "e2e/**",
+      "scripts/**",
+      ".ua-dashboard-deploy/**",
+      "*.png",
+      "*.md",
+      "playwright.config.js",
+      "vitest.config.mjs",
+      "lighthouserc.json"
+    ]
+  },
+  "hosting": {
+    "public": "web/dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "predeploy": ["npm run build"],
+    "rewrites": [
+      { "source": "/api/**", "function": { "functionId": "api", "region": "us-central1" } },
+      { "source": "/health", "function": { "functionId": "api", "region": "us-central1" } },
+      { "source": "**", "destination": "/index.html" }
+    ]
   }
 }
