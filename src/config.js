@@ -21,6 +21,7 @@ const envSchema = z.object({
   // OpenWeatherMap
   OWM_API_KEY: z.string().min(1, "OWM_API_KEY is required"),
   OWM_BASE_URL: z.string().url().default("https://api.openweathermap.org/data/2.5"),
+  OWM_GEO_BASE_URL: z.string().url().default("https://api.openweathermap.org/geo/1.0"),
   OWM_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
   DEFAULT_COUNTRY: z.string().length(2).default("US"),
   // Test/e2e seam: return deterministic location data instead of calling OWM.
@@ -75,6 +76,7 @@ function loadConfig(env = process.env) {
     owm: {
       apiKey: e.OWM_API_KEY,
       baseUrl: e.OWM_BASE_URL,
+      geoBaseUrl: e.OWM_GEO_BASE_URL,
       timeoutMs: e.OWM_TIMEOUT_MS,
       defaultCountry: e.DEFAULT_COUNTRY.toUpperCase(),
       mock: e.OWM_MOCK,

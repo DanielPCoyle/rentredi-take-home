@@ -1,15 +1,30 @@
 import { useState } from "react";
 import { api } from "../api.js";
+import { COUNTRIES } from "../countries.js";
 import { track } from "../analytics.js";
 import { zoneLabel } from "../util.js";
 import LocalClock from "./LocalClock.jsx";
+import LocationSelect from "./LocationSelect.jsx";
+
+function locationLabel(u) {
+  return [u.city || u.zip, u.country].filter(Boolean).join(", ") || "current location";
+}
 
 // One user. View mode shows derived location + the live clock, and is clickable
 // to focus/pulse the globe; edit mode sends only the changed fields (so the
-// backend refetches location only on ZIP change).
-export default function UserCard({ user, onChanged, onSelect, selected }) {
+// backend refetches location only when the location actually changes).
+export default function UserCard({ user, onChanged, onSelect, selected, online = true }) {
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: user.name, zip: user.zip, country: user.country || "" });
+  // locationOption seeds the autocomplete with the current location; picking a new
+  // suggestion (query != "") is what triggers a re-resolve. zip/country are the
+  // offline fallback.
+  const [form, setForm] = useState({
+    name: user.name,
+    locationQuery: "",
+    locationOption: { value: "current", label: locationLabel(user), query: "" },
+    zip: user.zip || "",
+    country: user.country || "",
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -19,8 +34,14 @@ export default function UserCard({ user, onChanged, onSelect, selected }) {
     try {
       const patch = {};
       if (form.name !== user.name) patch.name = form.name;
-      if (form.zip !== user.zip) patch.zip = form.zip;
-      if ((form.country || "") !== (user.country || "")) patch.country = form.country || undefined;
+      if (online) {
+        // Only send a locationQuery when the user picked a new suggestion or typed one.
+        const locationQuery = (form.locationOption?.query || form.locationQuery).trim();
+        if (locationQuery) patch.locationQuery = locationQuery;
+      } else {
+        if (form.zip && form.zip !== user.zip) patch.zip = form.zip;
+        if ((form.country || "") !== (user.country || "")) patch.country = form.country || undefined;
+      }
       if (Object.keys(patch).length) {
         await api("PUT", `/api/users/${user.id}`, patch);
         track("user_updated");
@@ -54,12 +75,30 @@ export default function UserCard({ user, onChanged, onSelect, selected }) {
         <div className="sub">Editing</div>
         <div className="edit">
           <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Name" />
-          <input value={form.zip} onChange={(e) => setForm({ ...form, zip: e.target.value })} placeholder="ZIP" />
-          <input
-            value={form.country}
-            onChange={(e) => setForm({ ...form, country: e.target.value })}
-            placeholder="Country (optional)"
-          />
+          {online ? (
+            <LocationSelect
+              inputId={`location-${user.id}`}
+              value={form.locationOption}
+              inputValue={form.locationQuery}
+              onSelect={(option) => setForm((f) => ({ ...f, locationOption: option, locationQuery: "" }))}
+              onType={(value) => setForm((f) => ({ ...f, locationQuery: value, locationOption: null }))}
+            />
+          ) : (
+            <div className="offline-location-fields">
+              <input value={form.zip} onChange={(e) => setForm({ ...form, zip: e.target.value })} placeholder="ZIP" />
+              <select
+                className="country-native-select"
+                aria-label="Country"
+                value={form.country}
+                onChange={(e) => setForm({ ...form, country: e.target.value })}
+              >
+                <option value="">Country</option>
+                {COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           {error && <div className="error">{error}</div>}
           <div className="actions">
             <button onClick={save} disabled={busy}>Save</button>

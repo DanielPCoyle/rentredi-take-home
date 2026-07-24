@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
+import LocationSelect from "./LocationSelect.jsx";
 import UserCard from "./UserCard.jsx";
 import { COUNTRIES } from "../countries.js";
 import { track } from "../analytics.js";
@@ -41,8 +42,10 @@ function GlobeLoader() {
 
 // Shared UI for both data sources (live Firebase RTDB + API polling): the create
 // form, then a two-column layout of the locations list and the globe.
-export default function UserManager({ users, source, onChanged, loading = false }) {
-  const [form, setForm] = useState({ name: "", zip: "", country: "US" });
+export default function UserManager({ users, source, onChanged, loading = false, online = true }) {
+  // `locationQuery`/`locationOption` drive the online autocomplete; `zip`/`country`
+  // are the manual fallback shown while offline (suggestions need the network).
+  const [form, setForm] = useState({ name: "", locationQuery: "", locationOption: null, zip: "", country: "US" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [focus, setFocus] = useState(null);
@@ -77,8 +80,6 @@ export default function UserManager({ users, source, onChanged, loading = false 
     return () => window.removeEventListener("keydown", onKey);
   }, [formOpen]);
 
-  const setCountry = (code) => setForm((f) => ({ ...f, country: code }));
-
   // Bring the focused location's card into view (list click, add, or globe pin click).
   useEffect(() => {
     if (!focus) return;
@@ -95,16 +96,37 @@ export default function UserManager({ users, source, onChanged, loading = false 
 
   async function create(e) {
     e.preventDefault();
+    if (!form.name.trim()) {
+      setError("Name is required");
+      return;
+    }
+    const body = { name: form.name };
+    if (online) {
+      // The autocomplete option carries a canonical query; fall back to whatever
+      // was typed if the user submits without picking a suggestion.
+      const locationQuery = (form.locationOption?.query || form.locationQuery).trim();
+      if (!locationQuery) {
+        setError("City or ZIP is required");
+        return;
+      }
+      body.locationQuery = locationQuery;
+    } else {
+      if (!form.zip.trim()) {
+        setError("ZIP is required while offline");
+        return;
+      }
+      body.zip = form.zip.trim();
+      body.country = form.country || "US";
+    }
     setBusy(true);
     setError(null);
     try {
-      const body = { name: form.name, zip: form.zip, country: form.country || undefined };
       const res = await api("POST", "/api/users", body);
       track("user_created");
-      setForm({ name: "", zip: "", country: form.country });
+      setForm({ name: "", locationQuery: "", locationOption: null, zip: "", country: form.country || "US" });
       setFormOpen(false); // close the mobile modal
       await onChanged();
-      if (res?.data && !res.queued) focusOn(res.data); // pending users have no coordinates yet
+      if (res?.data && !res.queued) focusOn(res.data); // queued (offline) users have no coordinates yet
     } catch (err) {
       setError(err.message);
     } finally {
@@ -112,12 +134,35 @@ export default function UserManager({ users, source, onChanged, loading = false 
     }
   }
 
-  const nativeCountrySelect = (
-    <select className="country-select" aria-label="Country" value={form.country} onChange={(e) => setCountry(e.target.value)}>
-      {COUNTRIES.map((c) => (
-        <option key={c.code} value={c.code}>{c.name}</option>
-      ))}
-    </select>
+  const locationSelect = (
+    <LocationSelect
+      inputId="location"
+      value={form.locationOption}
+      inputValue={form.locationQuery}
+      onSelect={(option) => setForm((f) => ({ ...f, locationOption: option, locationQuery: "" }))}
+      onType={(value) => setForm((f) => ({ ...f, locationQuery: value, locationOption: null }))}
+    />
+  );
+
+  const offlineLocationInputs = (
+    <div className="offline-location-fields">
+      <input
+        placeholder="ZIP"
+        value={form.zip}
+        onChange={(e) => setForm({ ...form, zip: e.target.value })}
+        required={!online}
+      />
+      <select
+        className="country-native-select"
+        aria-label="Country"
+        value={form.country}
+        onChange={(e) => setForm({ ...form, country: e.target.value })}
+      >
+        {COUNTRIES.map((c) => (
+          <option key={c.code} value={c.code}>{c.name}</option>
+        ))}
+      </select>
+    </div>
   );
 
   const globeLocations = users.filter((u) =>
@@ -142,13 +187,7 @@ export default function UserManager({ users, source, onChanged, loading = false 
           <button type="button" className="form-close" onClick={() => setFormOpen(false)} aria-label="Close">×</button>
           <form className="create" onSubmit={create}>
             <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-            <input
-              placeholder="ZIP (e.g. 78701)"
-              value={form.zip}
-              onChange={(e) => setForm({ ...form, zip: e.target.value })}
-              required
-            />
-            {nativeCountrySelect}
+            {online ? locationSelect : offlineLocationInputs}
             <button type="submit" disabled={busy}>
               {busy ? "Adding…" : "Add user"}
             </button>
@@ -177,6 +216,7 @@ export default function UserManager({ users, source, onChanged, loading = false 
                 onChanged={onChanged}
                 onSelect={() => { track("location_select"); focusOn(u); }}
                 selected={focus?.id === u.id}
+                online={online}
               />
             ))
           )}
