@@ -33,6 +33,21 @@ function errorHandler(err, req, res, next) {
     });
   }
 
+  // Errors thrown BEFORE the route ever runs — body-parser (`express.json`)
+  // raises PayloadTooLargeError (413) and SyntaxError (400) — are neither
+  // ZodError nor AppError, so without this they'd be masked as a 500: a
+  // misleading status for the client, and Sentry noise for a client-side
+  // mistake. Honor the status they already carry, but keep the message generic
+  // rather than echoing internals back.
+  const status = err.status || err.statusCode;
+  if (Number.isInteger(status) && status >= 400 && status < 500) {
+    const tooLarge = err.type === "entity.too.large";
+    const code = tooLarge ? "PAYLOAD_TOO_LARGE" : "BAD_REQUEST";
+    const message = tooLarge ? "Request body is too large" : "Malformed request body";
+    log.warn({ code, status, type: err.type }, message);
+    return res.status(status).json({ error: { code, message } });
+  }
+
   // Anything else is an unexpected bug: log the full error, hide internals from client.
   log.error({ err }, "unexpected error");
   return res.status(500).json({

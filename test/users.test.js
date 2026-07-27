@@ -56,6 +56,39 @@ test("POST rejects client-supplied lat/lon/timezone/id (400, not trusted)", asyn
   assert.equal(fetchCalls.length, 0);
 });
 
+// --- malformed requests (rejected by body-parser, before the route) --------
+// These never reach Zod, so they exercise the errorHandler's pass-through for
+// errors that already carry a status. Regression guard: both used to 500.
+
+test("POST with a body over the 10kb cap returns 413, not 500", async () => {
+  const res = await request(app)
+    .post("/api/users")
+    .send({ name: "x".repeat(11 * 1024), zip: "78701" });
+  assert.equal(res.status, 413);
+  assert.equal(res.body.error.code, "PAYLOAD_TOO_LARGE");
+  assert.equal(fetchCalls.length, 0);
+});
+
+test("POST with malformed JSON returns 400, not 500", async () => {
+  const res = await request(app)
+    .post("/api/users")
+    .set("Content-Type", "application/json")
+    .send('{"name":');
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error.code, "BAD_REQUEST");
+  assert.equal(fetchCalls.length, 0);
+});
+
+test("malformed-request responses do not leak internal error details", async () => {
+  const res = await request(app)
+    .post("/api/users")
+    .set("Content-Type", "application/json")
+    .send('{"name":');
+  assert.equal(res.body.error.message, "Malformed request body");
+  assert.equal(res.body.error.stack, undefined);
+  assert.equal(res.body.error.details, undefined);
+});
+
 // --- success --------------------------------------------------------------
 
 test("POST creates a user with server-fetched location (201)", async () => {

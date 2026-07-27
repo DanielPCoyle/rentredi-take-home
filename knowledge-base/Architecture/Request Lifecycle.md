@@ -94,6 +94,7 @@ refetching.
 4. `errorHandler` maps the error to one JSON envelope:
    - `ZodError` → `400 { error: { code: "VALIDATION_ERROR", message, details: [{ path, message }] } }`, logged at `warn`.
    - `AppError` subclass → status/code read off the error itself (`ValidationError` 400, `NotFoundError` 404, `UpstreamError` 502/504); `expected` errors (status `< 500`) log at `warn`, everything else logs at `error` with the full error/stack.
+   - an error that already carries a 4xx `status`/`statusCode` — raised *before* the route by `express.json`, i.e. an oversized body (`413 PAYLOAD_TOO_LARGE`) or malformed JSON (`400 BAD_REQUEST`) — is passed through with that status and a **generic** message, logged at `warn`. The message is deliberately not `err.message`: body-parser text can echo request internals back to the caller. The branch is bounded to `400`–`499` so a 5xx still falls through to the opaque handler below.
    - anything else (unexpected bug) → `500 { error: { code: "INTERNAL_ERROR", message: "An unexpected error occurred" } }`, logged at `error` — internals are never leaked to the client.
 5. `requestLogger`'s `finish` handler still logs the final status/duration, regardless of outcome.
 

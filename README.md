@@ -95,8 +95,9 @@ Base path `/api/users`. Success envelope `{ "data": ... }`; error envelope
 | DELETE | `/api/users/:id`  | —                                                    | 204     | 404 if missing |
 | GET    | `/api/locations/suggest` | `?q=<text>`                                    | 200     | City/ZIP autocomplete type-ahead (OpenWeatherMap `/geo/1.0` geocoding); powers the create form's "City or ZIP" field |
 
-**Status codes:** `400` validation / unknown ZIP · `404` not found ·
-`502` provider error · `504` provider timeout · `500` unexpected.
+**Status codes:** `400` validation / unknown ZIP / malformed JSON · `404` not
+found · `413` body over the 10kb cap · `502` provider error · `504` provider
+timeout · `500` unexpected.
 
 **User shape:** `{ id, name, zip, country, lat, lon, timezone, timezoneName, city, createdAt, updatedAt }`
 (`timezone` is the UTC offset in seconds as returned by OpenWeatherMap — a
@@ -248,8 +249,12 @@ and a stable machine `code`, so every failure becomes one consistent JSON
 envelope (`{ error: { code, message, details? } }`) without each controller
 re-deciding status codes. OpenWeatherMap failures are mapped deliberately:
 unknown ZIP → `400` (bad client input), provider 5xx/other → `502`, timeout →
-`504`, incomplete data → `502`. Expected client errors log at `warn`;
-upstream/unexpected errors log at `error` with the full stack. Logging is
+`504`, incomplete data → `502`. Errors raised *before* the route by
+`express.json` — an oversized body (`413`) or malformed JSON (`400`) — are
+neither typed nor Zod errors, so the handler passes through the 4xx status they
+already carry with a generic message rather than masking a client mistake as a
+`500`. Expected client errors log at `warn`; upstream/unexpected errors log at
+`error` with the full stack. Logging is
 structured JSON via **pino**, with a per-request child logger (see *Logging*).
 
 Optional **Sentry** error monitoring layers on top, gated entirely on DSN env
