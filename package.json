@@ -20,7 +20,7 @@
     "build": "npm run web:install && npm run web:build"
   },
   "dependencies": {
-    "@sentry/node": "^10.68.0",
+    "@sentry/node": "^10.69.0",
     "compression": "1.8.1",
     "dotenv": "17.4.2",
     "express": "5.2.1",
@@ -30,7 +30,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@playwright/test": "1.61.1",
+    "@playwright/test": "1.62.1",
     "@vitest/coverage-v8": "4.1.10",
     "nodemon": "3.1.14",
     "supertest": "7.2.2",
