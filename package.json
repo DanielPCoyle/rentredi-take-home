@@ -20,21 +20,21 @@
     "build": "npm run web:install && npm run web:build"
   },
   "dependencies": {
-    "@sentry/node": "^10.68.0",
-    "compression": "1.8.1",
+    "@sentry/node": "^10.75.3",
+    "compression": "1.8.2",
     "dotenv": "17.4.2",
     "express": "5.2.1",
-    "firebase-admin": "14.2.0",
+    "firebase-admin": "14.5.0",
     "pino": "10.3.1",
     "tz-lookup": "6.1.25",
-    "zod": "4.4.3"
+    "zod": "4.6.5"
   },
   "devDependencies": {
-    "@playwright/test": "1.61.1",
-    "@vitest/coverage-v8": "4.1.10",
+    "@playwright/test": "1.63.0",
+    "@vitest/coverage-v8": "4.1.11",
     "nodemon": "3.1.14",
-    "supertest": "7.2.2",
-    "vitest": "4.1.10"
+    "supertest": "7.3.0",
+    "vitest": "4.1.11"
   },
   "keywords": []
 }
