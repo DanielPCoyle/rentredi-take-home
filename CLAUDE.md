@@ -98,3 +98,103 @@ enhancement.
 - Update `.env.example` and the README whenever configuration requirements
   change.
 - Preserve `OWM_MOCK=1` as the deterministic, network-free end-to-end test path.
+
+## Project tracking — SimplerDevelopment MCP (real-time)
+
+Track all work in the SimplerDevelopment portal via the
+`mcp__claude_ai_Simpler_Development__*` tools, **in real time** — the board is the
+source of truth for what's in flight, not an after-the-fact record. Keep it live
+as you work; if you'd mention it in a standup (started something, made a call,
+hit a blocker, shipped something), reflect it on the board as it happens.
+
+### This project's coordinates (client SimplerDevelopment, id 104)
+
+- Project: **RentRedi User Manager — Take-Home Assessment** — `projectId: 206`
+- Active sprint: **RentRedi Initial Assessment** — `sprintId: 29`
+- Columns: Backlog `886` · To Do `887` · In Progress `888` · In Review `889` · Shipped `890`
+- Labels: Backend `69` · Frontend `70` · CI/CD `71` · Bug Fix `72` · Feature `73` · Infra `74`
+- Epics: Core app `940` · Frontend `941` · CI/CD `942` · Prod incident `943` · Feature restoration `944`
+
+### Workflow
+
+1. **Before starting** a unit of work, create a card (`kanban_create_card`) in
+   **To Do** on the active sprint (`sprintId: 29`), with the right `cardType`
+   (task / story / bug / spike / epic), a `parentCardId` if it belongs under an
+   epic, and `storyPoints`. Create the card first so nothing is untracked.
+2. **On pickup**, `kanban_move_card` to **In Progress** and set
+   `workflowState: in_progress`.
+3. **Record decisions as you make them** with `kanban_card_add_comment` —
+   trade-offs, why you chose one approach over another, gotchas found. Decisions
+   belong on the card, not only in commit messages.
+4. **When it's open for review/verification** (PR up, awaiting QA), move to
+   **In Review** (`workflowState: in_review`).
+5. **When merged + deployed + verified**, move to **Shipped**
+   (`workflowState: done`).
+6. Keep sprints (`sprints_create`) and epics reflecting reality, so
+   `kanban_list_board` always shows the true state.
+
+### Use the wider toolset when it fits
+
+The SD MCP is more than a kanban: decision records (`brain_decisions_*`), a
+knowledge base / docs (`brain_documents_*`, `brain_create_note`), CRM, projects,
+and proposals are all available. Prefer a durable portal artifact (a decision
+record, a document) over an ad-hoc local file when the work warrants something
+the team can see. Run `whoami` / `projects_list` if the coordinates above ever
+drift.
+
+## Document drift — check on every merge to `main`
+
+Docs rot silently: the code changes and the README / ADRs / knowledge base keep
+describing the old behavior. **Every merge into `main` must include a document-
+drift check** — the docs are part of the change, not an afterthought.
+
+### When (the trigger)
+
+Before any PR merges to `main` (and before calling a change "done"), ask: does
+this change make any existing prose inaccurate? Treat these as automatic drift
+triggers:
+
+- **Dependency swap / removal** — e.g. reactfire → `firebase/database` `onValue`.
+  Grep the docs for the old library/name.
+- **Feature added / removed / renamed** — e.g. the single-input autocomplete
+  replacing separate ZIP + country inputs.
+- **New / changed / removed API endpoint** — e.g. `GET /api/locations/suggest`
+  must appear in the README's endpoint table.
+- **Changed data shape, request body, or env var** — update the README tables
+  and `.env.example`.
+- **Changed deploy target, URL, provider, or config** — README live-demo link,
+  Railway/Firebase notes.
+- **A superseded decision** — the relevant ADR must be updated or marked
+  `Superseded`, not left `Accepted` describing the old approach.
+
+### What to check (scope)
+
+`README.md`, everything under `knowledge-base/` (ADRs, `Architecture/` incl. the
+System Map mermaid, `Concepts/`, `Meta/Glossary`), `.env.example`, load-bearing
+code comments, and the SimplerDevelopment board/ADR tickets. A fast sweep:
+`git diff --name-only origin/main...HEAD` to see what changed, then grep the docs
+for any removed symbol/feature/endpoint/env name.
+
+### Required action
+
+- **Fix drift in the same PR** whenever practical — the doc edit ships with the
+  code edit.
+- **If a full doc rewrite is out of scope**, do the minimum truthful fix (a
+  one-line "superseded: now uses X" note on the ADR + a tracking ticket on the
+  board under the Production-readiness / docs backlog). Never leave a doc
+  confidently describing behavior that no longer exists.
+- When an ADR's *decision* still holds but its *implementation detail* changed,
+  keep the ADR `Accepted` and add a short "Implementation note (superseded): …"
+  rather than rewriting the rationale.
+
+### Verify before completion
+
+State, in the completion summary, either "no doc drift" or the exact docs you
+updated. Do not report a merge complete without having run the drift check.
+
+> Known standing debt (2026-07-24): the ReactFire → `firebase/database` swap left
+> ~15 doc references stale (README + most of `knowledge-base/`, incl. ADR-0006);
+> the create-form is now an autocomplete but docs still say "ZIP + country";
+> `GET /api/locations/suggest` is undocumented; and ADR-0012 (Sentry) exists only
+> on the `archive/local-sandbox-history` branch. Clear these when touching the
+> relevant areas.
