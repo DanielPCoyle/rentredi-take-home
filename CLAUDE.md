@@ -98,3 +98,46 @@ enhancement.
 - Update `.env.example` and the README whenever configuration requirements
   change.
 - Preserve `OWM_MOCK=1` as the deterministic, network-free end-to-end test path.
+
+## Project tracking — SimplerDevelopment MCP (real-time)
+
+Track all work in the SimplerDevelopment portal via the
+`mcp__claude_ai_Simpler_Development__*` tools, **in real time** — the board is the
+source of truth for what's in flight, not an after-the-fact record. Keep it live
+as you work; if you'd mention it in a standup (started something, made a call,
+hit a blocker, shipped something), reflect it on the board as it happens.
+
+### This project's coordinates (client SimplerDevelopment, id 104)
+
+- Project: **RentRedi User Manager — Take-Home Assessment** — `projectId: 206`
+- Active sprint: **RentRedi Initial Assessment** — `sprintId: 29`
+- Columns: Backlog `886` · To Do `887` · In Progress `888` · In Review `889` · Shipped `890`
+- Labels: Backend `69` · Frontend `70` · CI/CD `71` · Bug Fix `72` · Feature `73` · Infra `74`
+- Epics: Core app `940` · Frontend `941` · CI/CD `942` · Prod incident `943` · Feature restoration `944`
+
+### Workflow
+
+1. **Before starting** a unit of work, create a card (`kanban_create_card`) in
+   **To Do** on the active sprint (`sprintId: 29`), with the right `cardType`
+   (task / story / bug / spike / epic), a `parentCardId` if it belongs under an
+   epic, and `storyPoints`. Create the card first so nothing is untracked.
+2. **On pickup**, `kanban_move_card` to **In Progress** and set
+   `workflowState: in_progress`.
+3. **Record decisions as you make them** with `kanban_card_add_comment` —
+   trade-offs, why you chose one approach over another, gotchas found. Decisions
+   belong on the card, not only in commit messages.
+4. **When it's open for review/verification** (PR up, awaiting QA), move to
+   **In Review** (`workflowState: in_review`).
+5. **When merged + deployed + verified**, move to **Shipped**
+   (`workflowState: done`).
+6. Keep sprints (`sprints_create`) and epics reflecting reality, so
+   `kanban_list_board` always shows the true state.
+
+### Use the wider toolset when it fits
+
+The SD MCP is more than a kanban: decision records (`brain_decisions_*`), a
+knowledge base / docs (`brain_documents_*`, `brain_create_note`), CRM, projects,
+and proposals are all available. Prefer a durable portal artifact (a decision
+record, a document) over an ad-hoc local file when the work warrants something
+the team can see. Run `whoami` / `projects_list` if the coordinates above ever
+drift.
